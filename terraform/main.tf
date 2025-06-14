@@ -10,10 +10,6 @@ terraform {
   }
 
   cloud {
-    workspaces {
-      # This will create workspaces like "automationLab-dev" and "automationLab-prod"
-      prefix = "automationLab-"
-    }
   }
 }
 
