@@ -19,12 +19,6 @@ variable "availability_zones" {
   default     = ["us-east-1a", "us-east-1b"]
 }
 
-variable "management_cidr" {
-  description = "The IP address range allowed to manage the FortiGate (HTTPS/SSH). This should be set as a GitHub Secret."
-  type        = string
-  sensitive   = true
-}
-
 # --- Tagging Variables ---
 variable "standard_tags" {
   description = "Standard tags to apply to all resources."
@@ -76,22 +70,3 @@ variable "private_subnet_a_cidr" {
 variable "private_subnet_b_cidr" {
   description = "CIDR block for the private subnet in AZ b."
   type        = string
-}
-
-# --- FortiGate Variables ---
-variable "fortigate_ami_id" {
-  description = "The AMI ID for the FortiGate NGFW. Find this in the AWS Marketplace for your region."
-  type        = string
-}
-
-variable "ssh_key_name" {
-  description = "The name of an existing EC2 Key Pair in your AWS account for SSH access."
-  type        = string
-}
-
-variable "fortigate_admin_password" {
-  description = "The initial password for the FortiGate admin user. Should be set via a GitHub Secret."
-  type        = string
-  sensitive   = true
-}
-
