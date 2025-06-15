@@ -70,3 +70,4 @@ variable "private_subnet_a_cidr" {
 variable "private_subnet_b_cidr" {
   description = "CIDR block for the private subnet in AZ b."
   type        = string
+}
