@@ -71,8 +71,3 @@ variable "private_subnet_b_cidr" {
   description = "CIDR block for the private subnet in AZ b."
   type        = string
 }
-
-variable "environment" {
-  description = "The deployment environment name (e.g., dev, prod)."
-  type        = string
-}
