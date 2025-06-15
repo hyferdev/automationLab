@@ -8,7 +8,7 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags = merge(var.standard_tags, var.project_tags, {
-    Name = "hyfer-${var.project_name}-vpc"
+    Name = "hyfer-${var.project_name}-${var.environment}-vpc"
   })
 }
 
@@ -20,7 +20,7 @@ resource "aws_subnet" "public_a" {
   map_public_ip_on_launch = true
 
   tags = merge(var.standard_tags, var.project_tags, {
-    Name = "hyfer-${var.project_name}-public-subnet-a"
+    Name = "hyfer-${var.project_name}-${var.environment}-public-subnet-a"
   })
 }
 
@@ -31,7 +31,7 @@ resource "aws_subnet" "public_b" {
   map_public_ip_on_launch = true
 
   tags = merge(var.standard_tags, var.project_tags, {
-    Name = "hyfer-${var.project_name}-public-subnet-b"
+    Name = "hyfer-${var.project_name}-${var.environment}-public-subnet-b"
   })
 }
 
@@ -41,7 +41,7 @@ resource "aws_subnet" "private_a" {
   availability_zone = var.availability_zones[0]
 
   tags = merge(var.standard_tags, var.project_tags, {
-    Name = "hyfer-${var.project_name}-private-subnet-a"
+    Name = "hyfer-${var.project_name}-${var.environment}-private-subnet-a"
   })
 }
 
@@ -51,7 +51,7 @@ resource "aws_subnet" "private_b" {
   availability_zone = var.availability_zones[1]
 
   tags = merge(var.standard_tags, var.project_tags, {
-    Name = "hyfer-${var.project_name}-private-subnet-b"
+    Name = "hyfer-${var.project_name}-${var.environment}-private-subnet-b"
   })
 }
 
@@ -60,7 +60,7 @@ resource "aws_internet_gateway" "main_gw" {
   vpc_id = aws_vpc.main.id
 
   tags = merge(var.standard_tags, var.project_tags, {
-    Name = "hyfer-${var.project_name}-igw"
+    Name = "hyfer-${var.project_name}-${var.environment}-igw"
   })
 }
 
@@ -74,7 +74,7 @@ resource "aws_route_table" "public_rt" {
   }
 
   tags = merge(var.standard_tags, var.project_tags, {
-    Name = "hyfer-${var.project_name}-public-rt"
+    Name = "hyfer-${var.project_name}-${var.environment}-public-rt"
   })
 }
 

@@ -47,3 +47,9 @@ variable "project_tags" {
   type        = map(string)
   default     = {}
 }
+
+# NEW: Add a variable to accept the environment name directly.
+variable "environment" {
+  description = "The deployment environment name (e.g., dev, prod)."
+  type        = string
+}
