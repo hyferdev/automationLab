@@ -21,7 +21,7 @@ data "aws_ami" "ubuntu" {
 # This security group allows SSH access from a specified IP range.
 resource "aws_security_group" "instance_sg" {
   name        = "${var.instance_name}-sg"
-  description = "Allow SSH inbound traffic"
+  description = "Allow SSH, ICMP, and internal traffic"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -30,6 +30,22 @@ resource "aws_security_group" "instance_sg" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = [var.ssh_access_cidr]
+  }
+
+  ingress {
+    description = "Allow ICMP (ping) from trusted source"
+    from_port   = -1 # -1 means all ICMP types
+    to_port     = -1 # -1 means all ICMP codes
+    protocol    = "icmp"
+    cidr_blocks = [var.ssh_access_cidr]
+  }
+
+  ingress {
+    description = "Allow all internal VPC traffic"
+    from_port   = 0    # 0 means all ports
+    to_port     = 0    # 0 means all ports
+    protocol    = "-1" # -1 means all protocols
+    cidr_blocks = [var.internal_traffic_cidr]
   }
 
   egress {
