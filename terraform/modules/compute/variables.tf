@@ -30,6 +30,11 @@ variable "ssh_access_cidr" {
   type        = string
 }
 
+variable "internal_traffic_cidr" {
+  description = "The CIDR block for internal traffic within the VPC."
+  type        = string
+}
+
 variable "standard_tags" {
   description = "A map of standard tags to apply to all resources."
   type        = map(string)
@@ -41,4 +46,5 @@ variable "project_tags" {
   type        = map(string)
   default     = {}
 }
+
 
