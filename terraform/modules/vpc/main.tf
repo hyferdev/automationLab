@@ -55,7 +55,7 @@ resource "aws_subnet" "private_b" {
   })
 }
 
-# --- Internet Gateway & Routing ---
+# --- Internet Gateway (for Public Subnets) ---
 resource "aws_internet_gateway" "main_gw" {
   vpc_id = aws_vpc.main.id
 

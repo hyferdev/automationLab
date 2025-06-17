@@ -19,6 +19,12 @@ variable "availability_zones" {
   default     = ["us-east-1a", "us-east-1b"]
 }
 
+variable "management_cidr" {
+  description = "The IP address range allowed for SSH access."
+  type        = string
+  sensitive   = true
+}
+
 # --- Tagging Variables ---
 variable "standard_tags" {
   description = "Standard tags to apply to all resources."
@@ -69,5 +75,16 @@ variable "private_subnet_a_cidr" {
 
 variable "private_subnet_b_cidr" {
   description = "CIDR block for the private subnet in AZ b."
+  type        = string
+}
+
+# --- Compute Variables ---
+variable "instance_type" {
+  description = "The EC2 instance type for the test VMs."
+  type        = string
+}
+
+variable "ssh_key_name" {
+  description = "The name of an existing EC2 Key Pair for SSH access."
   type        = string
 }
