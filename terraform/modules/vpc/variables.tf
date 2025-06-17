@@ -52,3 +52,4 @@ variable "environment" {
   description = "The deployment environment name (e.g., dev, prod)."
   type        = string
 }
+
