@@ -95,3 +95,4 @@ module "vm_private_b" {
   standard_tags         = var.standard_tags
   project_tags          = merge(var.project_tags, { environment = var.environment })
 }
+
