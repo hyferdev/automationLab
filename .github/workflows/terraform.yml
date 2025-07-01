@@ -43,7 +43,7 @@ jobs:
 
       - name: Determine Environment and Workspace
         id: get_env
-        run: run: |
+        run: |
           if [ "${{ github.ref_name }}" == "main" ]; then
             echo "ENVIRONMENT_NAME=prod" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref_name }}" == "dev" ]; then
