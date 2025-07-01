@@ -1,4 +1,5 @@
 # Automation Lab - Infrastructure as Code
+[Testing Rules](Testing-Rules)
 
 This repository contains the Terraform code and CI/CD pipelines to build and manage the AWS infrastructure for the "Automation Lab" project. It uses a modular, multi-environment approach to automatically deploy development (`dev`) and production (`prod`) environments.
 
