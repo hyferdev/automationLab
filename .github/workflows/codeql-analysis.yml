@@ -1,0 +1,54 @@
+# .github/workflows/codeql-analysis.yml
+# This workflow enables GitHub Code Scanning using the CodeQL engine.
+
+name: "CodeQL Security Scan"
+
+on:
+  push:
+    branches: [ main, dev, sandbox ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '30 2 * * 1' # Run every Monday at 2:30 AM UTC
+
+jobs:
+  analyze:
+    name: Analyze Code
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # CodeQL supports many languages. For this project, we are primarily
+        # interested in the configuration files (Terraform HCL).
+        # 'hcl' is not a language that CodeQL analyzes directly, but the 'go'
+        # extractor has some support for it. We will let it auto-detect.
+        language: [ 'go' ] # The Go extractor has some HCL support.
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        # If you wanted to specify a custom query pack, you could do so here.
+        # queries: security-extended,security-and-quality
+
+    # Autobuild attempts to build any compiled languages (like Go).
+    # For languages like Terraform, this step helps CodeQL understand the code structure.
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    # Performs the CodeQL analysis.
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+
