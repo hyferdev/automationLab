@@ -23,6 +23,7 @@ env:
   AWS_REGION: 'us-east-1'
   TF_WORKING_DIR: 'terraform'
   TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
+  TF_WORKSPACE: ${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}
 
 permissions:
   id-token: write
@@ -35,7 +36,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tf_environment: ${{ steps.get_env.outputs.ENVIRONMENT_NAME }}
-      tf_workspace: ${{ steps.get_env.outputs.TF_WORKSPACE_NAME }}
 
     steps:
       - name: Checkout Repository
@@ -43,16 +43,13 @@ jobs:
 
       - name: Determine Environment and Workspace
         id: get_env
-        run: |
+        run: run: |
           if [ "${{ github.ref_name }}" == "main" ]; then
             echo "ENVIRONMENT_NAME=prod" >> $GITHUB_OUTPUT
-            echo "TF_WORKSPACE_NAME=automationLab-prod" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref_name }}" == "dev" ]; then
             echo "ENVIRONMENT_NAME=dev" >> $GITHUB_OUTPUT
-            echo "TF_WORKSPACE_NAME=automationLab-dev" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref_name }}" == "sandbox" ]; then
             echo "ENVIRONMENT_NAME=sandbox" >> $GITHUB_OUTPUT
-            echo "TF_WORKSPACE_NAME=automationLab-sandbox" >> $GITHUB_OUTPUT
           fi
 
       - name: Configure AWS Credentials
@@ -71,8 +68,6 @@ jobs:
         id: init
         run: terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        env:
-          TF_WORKSPACE: ${{ steps.get_env.outputs.TF_WORKSPACE_NAME }}
 
       - name: Terraform Validate
         run: terraform validate -no-color
@@ -87,7 +82,7 @@ jobs:
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ steps.get_env.outputs.TF_WORKSPACE_NAME }}
+          name: tfplan-${{ env.TF_WORKSPACE }}
           path: ${{ env.TF_WORKING_DIR }}/tfplan
 
   terraform-apply:
@@ -116,14 +111,12 @@ jobs:
       - name: Download Plan Artifact
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-${{ needs.terraform-plan.outputs.tf_workspace }}
+          name: tfplan-${{ env.TF_WORKSPACE }}
           path: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Init
         run: terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
-        env:
-          TF_WORKSPACE: ${{ needs.terraform-plan.outputs.tf_workspace }}
 
       - name: Terraform Apply
         run: terraform apply -input=false tfplan
