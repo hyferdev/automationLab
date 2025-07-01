@@ -17,7 +17,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-
 # --- VPC ---
 # Call the VPC module
 module "vpc" {
