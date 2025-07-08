@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'The environment to destroy (dev or prod)'
+        description: 'The environment to destroy (dev, prod, or sandbox)'
         required: true
         type: choice
         options:
