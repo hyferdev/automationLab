@@ -14,6 +14,7 @@ on:
         options:
         - dev
         - prod
+        - sandbox
 
 env:
   TF_LOG: INFO
