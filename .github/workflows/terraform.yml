@@ -9,6 +9,7 @@ on:
     branches:
       - dev      # for dev deployments
       - main     # for prod deployments
+      - sandbox  # for friend/collaborator deployments
     paths:
       - 'terraform/**'
   pull_request:
@@ -22,7 +23,7 @@ env:
   AWS_REGION: 'us-east-1'
   TF_WORKING_DIR: 'terraform'
   TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
-  TF_WORKSPACE: ${{ (github.ref_name == 'main' && 'automationLab-prod') || 'automationLab-dev' }}
+  TF_WORKSPACE: ${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}
 
 permissions:
   id-token: write
@@ -33,10 +34,23 @@ jobs:
   terraform-plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    
+    outputs:
+      tf_environment: ${{ steps.get_env.outputs.ENVIRONMENT_NAME }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Determine Environment and Workspace
+        id: get_env
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "ENVIRONMENT_NAME=prod" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" == "dev" ]; then
+            echo "ENVIRONMENT_NAME=dev" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" == "sandbox" ]; then
+            echo "ENVIRONMENT_NAME=sandbox" >> $GITHUB_OUTPUT
+          fi
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -75,8 +89,8 @@ jobs:
     name: Terraform Apply
     needs: terraform-plan
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && github.event_name == 'push'
-    environment: ${{ (github.ref_name == 'main' && 'prod') || 'dev' }}
+    if: (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/sandbox') && github.event_name == 'push'
+    environment: ${{ needs.terraform-plan.outputs.tf_environment }}
 
     steps:
       - name: Checkout Repository
@@ -107,4 +121,3 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -input=false tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
-
