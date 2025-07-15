@@ -53,3 +53,7 @@ variable "environment" {
   type        = string
 }
 
+variable "transit_gateway_id" {
+  description = "The ID of the Transit Gateway to attach to."
+  type        = string
+}
