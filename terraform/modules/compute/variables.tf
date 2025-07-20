@@ -10,6 +10,11 @@ variable "instance_type" {
   type        = string
 }
 
+variable "instance_disk_size" {
+  description = "The size of the root block device in GB."
+  type        = number
+}
+
 variable "vpc_id" {
   description = "The ID of the VPC to deploy the instance into."
   type        = string

@@ -88,3 +88,9 @@ variable "ssh_key_name" {
   description = "The name of an existing EC2 Key Pair for SSH access."
   type        = string
 }
+
+variable "instance_disk_size" {
+  description = "The size of the root block device in GB for the EC2 instances."
+  type        = number
+  default     = 65
+}

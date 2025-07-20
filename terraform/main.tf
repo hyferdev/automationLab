@@ -45,6 +45,7 @@ module "vm_public_a" {
 
   instance_name         = "${var.project_name}-${var.environment}-vm-public-a"
   instance_type         = var.instance_type
+  instance_disk_size    = var.instance_disk_size
   vpc_id                = module.vpc.vpc_id
   subnet_id             = module.vpc.public_subnet_ids[0]
   ssh_key_name          = var.ssh_key_name
@@ -60,6 +61,7 @@ module "vm_public_b" {
 
   instance_name         = "${var.project_name}-${var.environment}-vm-public-b"
   instance_type         = var.instance_type
+  instance_disk_size    = var.instance_disk_size
   vpc_id                = module.vpc.vpc_id
   subnet_id             = module.vpc.public_subnet_ids[1]
   ssh_key_name          = var.ssh_key_name
@@ -75,6 +77,7 @@ module "vm_private_a1" {
 
   instance_name         = "${var.project_name}-${var.environment}-vm-private-a1"
   instance_type         = var.instance_type
+  instance_disk_size    = var.instance_disk_size
   vpc_id                = module.vpc.vpc_id
   subnet_id             = module.vpc.private_subnet_ids[0]
   ssh_key_name          = var.ssh_key_name
@@ -89,6 +92,7 @@ module "vm_private_a2" {
 
   instance_name         = "${var.project_name}-${var.environment}-vm-private-a2"
   instance_type         = var.instance_type
+  instance_disk_size    = var.instance_disk_size
   vpc_id                = module.vpc.vpc_id
   subnet_id             = module.vpc.private_subnet_ids[0]
   ssh_key_name          = var.ssh_key_name
@@ -104,6 +108,7 @@ module "vm_private_b" {
 
   instance_name         = "${var.project_name}-${var.environment}-vm-private-b"
   instance_type         = var.instance_type
+  instance_disk_size    = var.instance_disk_size
   vpc_id                = module.vpc.vpc_id
   subnet_id             = module.vpc.private_subnet_ids[1]
   ssh_key_name          = var.ssh_key_name
