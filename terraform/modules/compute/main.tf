@@ -2,6 +2,23 @@
 # This module deploys a single EC2 instance.
 
 # This data source looks up the latest Ubuntu 22.04 LTS AMI in the current region.
+
+data "aws_ami" "debian" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["debian-12-amd64-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["136693071363"] # Debian's official AWS account ID
+}
+/*
 data "aws_ami" "ubuntu" {
   most_recent = true
 
@@ -17,7 +34,7 @@ data "aws_ami" "ubuntu" {
 
   owners = ["099720109477"] # Canonical's AWS account ID
 }
-
+*/
 # This security group allows SSH access from a specified IP range.
 resource "aws_security_group" "instance_sg" {
   name        = "${var.instance_name}-sg"

@@ -39,6 +39,7 @@ module "vpc" {
 
 # --- Compute ---
 # Call the compute module once for each subnet.
+
 module "vm_public_a" {
   source = "./modules/compute"
 
@@ -53,6 +54,7 @@ module "vm_public_a" {
   project_tags          = merge(var.project_tags, { environment = var.environment })
 }
 
+/*
 module "vm_public_b" {
   source = "./modules/compute"
 
@@ -66,11 +68,12 @@ module "vm_public_b" {
   standard_tags         = var.standard_tags
   project_tags          = merge(var.project_tags, { environment = var.environment })
 }
+*/
 
-module "vm_private_a" {
+module "vm_private_a1" {
   source = "./modules/compute"
 
-  instance_name         = "${var.project_name}-${var.environment}-vm-private-a"
+  instance_name         = "${var.project_name}-${var.environment}-vm-private-a1"
   instance_type         = var.instance_type
   vpc_id                = module.vpc.vpc_id
   subnet_id             = module.vpc.private_subnet_ids[0]
@@ -81,6 +84,21 @@ module "vm_private_a" {
   project_tags          = merge(var.project_tags, { environment = var.environment })
 }
 
+module "vm_private_a2" {
+  source = "./modules/compute"
+
+  instance_name         = "${var.project_name}-${var.environment}-vm-private-a2"
+  instance_type         = var.instance_type
+  vpc_id                = module.vpc.vpc_id
+  subnet_id             = module.vpc.private_subnet_ids[0]
+  ssh_key_name          = var.ssh_key_name
+  ssh_access_cidr       = var.management_cidr
+  internal_traffic_cidr = var.vpc_cidr
+  standard_tags         = var.standard_tags
+  project_tags          = merge(var.project_tags, { environment = var.environment })
+}
+
+/*
 module "vm_private_b" {
   source = "./modules/compute"
 
@@ -94,3 +112,4 @@ module "vm_private_b" {
   standard_tags         = var.standard_tags
   project_tags          = merge(var.project_tags, { environment = var.environment })
 }
+*/
