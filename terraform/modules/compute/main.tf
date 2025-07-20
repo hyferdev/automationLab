@@ -79,7 +79,7 @@ resource "aws_security_group" "instance_sg" {
 
 # The EC2 instance resource.
 resource "aws_instance" "vm" {
-  ami                    = data.aws_ami.ubuntu.id
+  ami                    = data.aws_ami.debian.id
   instance_type          = var.instance_type
   subnet_id              = var.subnet_id
   key_name               = var.ssh_key_name
