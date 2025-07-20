@@ -15,6 +15,12 @@ variable "instance_disk_size" {
   type        = number
 }
 
+variable "private_ip" {
+  description = "The primary private IP address to associate with the instance."
+  type        = string
+  default     = null
+}
+
 variable "vpc_id" {
   description = "The ID of the VPC to deploy the instance into."
   type        = string

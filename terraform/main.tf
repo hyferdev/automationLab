@@ -80,6 +80,7 @@ module "vm_private_a1" {
   instance_disk_size    = var.instance_disk_size
   vpc_id                = module.vpc.vpc_id
   subnet_id             = module.vpc.private_subnet_ids[0]
+  private_ip            = "10.20.60.201"
   ssh_key_name          = var.ssh_key_name
   ssh_access_cidr       = var.management_cidr
   internal_traffic_cidr = var.vpc_cidr
@@ -95,6 +96,7 @@ module "vm_private_a2" {
   instance_disk_size    = var.instance_disk_size
   vpc_id                = module.vpc.vpc_id
   subnet_id             = module.vpc.private_subnet_ids[0]
+  private_ip            = "10.20.60.202"
   ssh_key_name          = var.ssh_key_name
   ssh_access_cidr       = var.management_cidr
   internal_traffic_cidr = var.vpc_cidr

@@ -84,6 +84,11 @@ resource "aws_instance" "vm" {
   subnet_id              = var.subnet_id
   key_name               = var.ssh_key_name
   vpc_security_group_ids = [aws_security_group.instance_sg.id]
+  private_ip             = var.private_ip
+  
+  root_block_device {
+    volume_size = var.instance_disk_size
+  }
 
   tags = merge(var.standard_tags, var.project_tags, {
     Name = var.instance_name
