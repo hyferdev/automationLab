@@ -17,25 +17,15 @@ on:
       - main
     paths:
       - 'terraform/**'
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to run the workflow against'
-        required: true
-        default: 'dev'
-        type: choice
-        options:
-        - dev
-        - main
-        - sandbox
+  workflow_dispatch: # Allows for manual runs from a specific branch
 
 env:
   TF_LOG: INFO
   AWS_REGION: 'us-east-1'
   TF_WORKING_DIR: 'terraform'
   TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
-  # Determine workspace based on the trigger event
-  TF_WORKSPACE: ${{ (github.event_name == 'workflow_dispatch' && format('automationLab-{0}', github.event.inputs.environment)) || (github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox')) }}
+  # Determine workspace based on the branch name for all events
+  TF_WORKSPACE: ${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}
 
 permissions:
   id-token: write
@@ -53,12 +43,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Determine Environment and Workspace
+      - name: Determine Environment from branch name
         id: get_env
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "ENVIRONMENT_NAME=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref_name }}" == "main" ]; then
+          if [ "${{ github.ref_name }}" == "main" ]; then
             echo "ENVIRONMENT_NAME=prod" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref_name }}" == "dev" ]; then
             echo "ENVIRONMENT_NAME=dev" >> $GITHUB_OUTPUT
@@ -103,8 +91,8 @@ jobs:
     name: Terraform Apply
     needs: terraform-plan
     runs-on: ubuntu-latest
-    # Run on push to specified branches OR on manual workflow_dispatch event
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/sandbox')) || github.event_name == 'workflow_dispatch'
+    # Run on push or manual dispatch, but only for specific branches
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref_name == 'dev' || github.ref_name == 'main' || github.ref_name == 'sandbox')
     environment: ${{ needs.terraform-plan.outputs.tf_environment }}
 
     steps:
