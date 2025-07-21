@@ -46,14 +46,9 @@ variable "ssh_key_name" {
   type        = string
 }
 
-variable "ssh_access_cidr" {
-  description = "The IP address range allowed to SSH into the instance."
-  type        = string
-}
-
-variable "internal_traffic_cidr" {
-  description = "The CIDR block for internal traffic within the VPC."
-  type        = string
+variable "vpc_security_group_ids" {
+  description = "A list of security group IDs to associate with the instance."
+  type        = list(string)
 }
 
 variable "standard_tags" {
