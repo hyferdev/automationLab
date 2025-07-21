@@ -1,4 +1,4 @@
-V# /terraform/modules/compute/main.tf
+# /terraform/modules/compute/main.tf
 # This module deploys a single EC2 instance.
 
 data "aws_ami" "debian" {
