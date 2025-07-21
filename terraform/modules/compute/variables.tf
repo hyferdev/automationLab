@@ -5,6 +5,16 @@ variable "instance_name" {
   type        = string
 }
 
+variable "instance_os" {
+  description = "The operating system for the EC2 instances. Valid options are 'debian' or 'ubuntu'."
+  type        = string
+  default     = "ubuntu"
+  validation {
+    condition     = contains(["debian", "ubuntu"], var.instance_os)
+    error_message = "The instance_os must be either 'debian' or 'ubuntu'."
+  }
+}
+
 variable "instance_type" {
   description = "The EC2 instance type."
   type        = string
