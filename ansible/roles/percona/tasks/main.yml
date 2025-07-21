@@ -1,0 +1,61 @@
+---
+# tasks file for roles/percona
+
+- name: Create temporary directory on the bastion for the download
+  ansible.builtin.file:
+    path: /tmp/ansible_downloads
+    state: directory
+  delegate_to: "{{ groups['bastion'][0] }}"
+  run_once: true
+
+- name: Download Percona repository package to the bastion
+  ansible.builtin.get_url:
+    url: https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+    dest: /tmp/ansible_downloads/percona-release_latest.generic_all.deb
+    mode: '0644'
+  delegate_to: "{{ groups['bastion'][0] }}" 
+  run_once: true
+
+- name: Fetch the downloaded file from the bastion to the controller
+  ansible.builtin.fetch:
+    src: /tmp/ansible_downloads/percona-release_latest.generic_all.deb
+    dest: /tmp/ansible_downloads/ 
+    flat: yes
+  delegate_to: "{{ groups['bastion'][0] }}"
+  run_once: true
+
+- name: Copy Percona package to the target host
+  ansible.builtin.copy:
+    src: /tmp/ansible_downloads/percona-release_latest.generic_all.deb
+    dest: /tmp/percona-release_latest.generic_all.deb
+    mode: '0644'
+  become: yes
+
+- name: Install required dependencies for Percona repository
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Install Percona repository package
+  ansible.builtin.apt:
+    deb: /tmp/percona-release_latest.generic_all.deb
+  become: yes
+
+- name: Configure Percona repository for ps-80
+  ansible.builtin.command: percona-release setup ps80 -y
+  become: yes
+  args:
+    creates: /etc/apt/sources.list.d/percona-ps-80-release.list
+
+- name: Install Percona Server and client
+  ansible.builtin.apt:
+    name:
+      - percona-server-server
+      - percona-server-client
+    state: present
+    update_cache: yes
+  become: yes
+  notify: Start and enable mysqld
+

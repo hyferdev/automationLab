@@ -1,0 +1,10 @@
+---
+# handlers file for roles/percona
+- name: Start and enable mysqld
+  ansible.builtin.service:
+    name: mysqld
+    state: started
+    enabled: yes
+  become: yes
+
+

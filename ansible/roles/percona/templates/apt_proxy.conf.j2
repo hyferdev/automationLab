@@ -1,0 +1,4 @@
+# This file is managed by Ansible.
+# It configures APT to use the bastion host as an HTTP proxy.
+Acquire::http::Proxy "http://{{ hostvars[groups['bastion'][0]]['ansible_default_ipv4']['address'] }}:3142";
+

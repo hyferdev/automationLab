@@ -1,0 +1,18 @@
+---
+# tasks file for roles/apt_cacher
+# This role installs and configures the apt-cacher-ng proxy.
+
+- name: Install apt-cacher-ng proxy server
+  ansible.builtin.apt:
+    name: apt-cacher-ng
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Ensure apt-cacher-ng is started and enabled
+  ansible.builtin.service:
+    name: apt-cacher-ng
+    state: started
+    enabled: yes
+  become: yes
+

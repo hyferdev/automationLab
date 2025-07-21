@@ -1,4 +1,6 @@
 # Terraform local files
+ansible/inventory.ini
+ansible/vars/secrets.yml
 .terraform/
 *.tfstate
 *.tfstate.*
