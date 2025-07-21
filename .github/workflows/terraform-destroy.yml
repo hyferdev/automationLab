@@ -1,39 +1,51 @@
 # .github/workflows/terraform-destroy.yml
-# This workflow manually triggers a terraform destroy for a specified environment.
+# This workflow manually triggers a terraform destroy for a specified environment,
+# deriving the environment from the selected branch.
 
 name: 'Terraform Destroy'
 
 on:
-  # Allows you to run this workflow manually from the Actions tab
+  # Allows you to run this workflow manually from the Actions tab for a specific branch
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'The environment to destroy (dev or prod)'
-        required: true
-        type: choice
-        options:
-        - dev
-        - prod
-        - sandbox
 
 env:
   TF_LOG: INFO
   AWS_REGION: 'us-east-1'
   TF_WORKING_DIR: 'terraform'
   TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
-  # Set the workspace based on the manual input
-  TF_WORKSPACE: 'automationLab-${{ github.event.inputs.environment }}'
+  # Set the workspace based on the branch name
+  TF_WORKSPACE: ${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
+  determine-environment:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      tf_environment: ${{ steps.get_env.outputs.ENVIRONMENT_NAME }}
+    steps:
+      - name: Determine Environment from branch name
+        id: get_env
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "ENVIRONMENT_NAME=prod" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" == "dev" ]; then
+            echo "ENVIRONMENT_NAME=dev" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" == "sandbox" ]; then
+            echo "ENVIRONMENT_NAME=sandbox" >> $GITHUB_OUTPUT
+          fi
+
   terraform-destroy:
     name: Terraform Destroy
+    needs: determine-environment
     runs-on: ubuntu-latest
     # Use the GitHub Environment for any protection rules
-    environment: ${{ github.event.inputs.environment }}
+    environment: ${{ needs.determine-environment.outputs.tf_environment }}
+    # Only run if the environment was successfully determined
+    if: needs.determine-environment.outputs.tf_environment != ''
 
     steps:
       - name: Checkout Repository
@@ -60,4 +72,3 @@ jobs:
         # Terraform Cloud will automatically load the correct variables for the workspace
         run: terraform destroy -auto-approve
         working-directory: ${{ env.TF_WORKING_DIR }}
-
