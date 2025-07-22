@@ -3,79 +3,165 @@
   hosts: vm_private_a1
   become: yes
   vars_files:
-    # Load encrypted variables
-    - vars/secrets.yml
+    - vars/secrets.yml # Load encrypted variables
+  handlers:
+    - name: restart mysqld
+      ansible.builtin.service:
+        name: mysql
+        state: restarted
   tasks:
-    - name: Ensure server-id is set on primary
-      ansible.builtin.lineinfile:
-        path: /etc/my.cnf
-        regexp: '^server-id'
-        line: 'server-id = 1'
-        insertafter: '\[mysqld\]'
+    - name: Create replication configuration file on primary
+      ansible.builtin.template:
+        src: templates/primary.cnf.j2
+        dest: /etc/mysql/conf.d/replication.cnf
+        owner: root
+        group: root
+        mode: '0644'
       notify: restart mysqld
 
-    - name: Ensure binary logging is enabled
-      ansible.builtin.lineinfile:
-        path: /etc/my.cnf
-        regexp: '^log-bin'
-        line: 'log-bin = mysql-bin'
-        insertafter: '\[mysqld\]'
-      notify: restart mysqld
+    - name: Ensure handlers are flushed to apply config changes before proceeding
+      ansible.builtin.meta: flush_handlers
+
+    - name: Reset the master to ensure a clean binary log
+      community.mysql.mysql_query:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        query: "RESET MASTER;"
+
+    - name: Flush tables with read lock
+      community.mysql.mysql_query:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        query: "FLUSH TABLES WITH READ LOCK;"
+
+    - name: Get master status
+      community.mysql.mysql_query:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        query: "SHOW MASTER STATUS;"
+      register: master_status
 
 - name: Configure Replica and Start Replication
   hosts: vm_private_a2
   become: yes
   vars_files:
-    # Load encrypted variables
-    - vars/secrets.yml
+    - vars/secrets.yml # Load encrypted variables
   vars:
-    # Non-sensitive variables
     replication_user: "repl_user"
     primary_host: "{{ hostvars['vm_private_a1'].ansible_host }}"
+    master_log_file: "{{ hostvars['vm_private_a1'].master_status.query_result[0][0].File }}"
+    master_log_pos: "{{ hostvars['vm_private_a1'].master_status.query_result[0][0].Position }}"
   handlers:
     - name: restart mysqld
       ansible.builtin.service:
-        name: mysqld
+        name: mysql
         state: restarted
 
   tasks:
-    - name: Ensure server-id is set on replica
-      ansible.builtin.lineinfile:
-        path: /etc/my.cnf
-        regexp: '^server-id'
-        line: 'server-id = 2'
-        insertafter: '\[mysqld\]'
+    - name: Create replication configuration file on replica
+      ansible.builtin.template:
+        src: templates/replica.cnf.j2
+        dest: /etc/mysql/conf.d/replication.cnf
+        owner: root
+        group: root
+        mode: '0644'
       notify: restart mysqld
 
-    - name: Stop replication if it is running
+    - name: Ensure handlers are flushed to apply config changes before proceeding
+      ansible.builtin.meta: flush_handlers
+
+    - name: Stop slave if it is running
       community.mysql.mysql_replication:
-        mode: stopreplica
+        mode: stopslave
         login_user: root
         login_password: "{{ mysql_root_password }}"
       ignore_errors: yes
 
-    - name: Clone data from primary
-      community.mysql.mysql_replication:
-        mode: clone
+    - name: Reset the replica state completely
+      ansible.builtin.shell: mysql -e "RESET SLAVE ALL;"
+      changed_when: true
+
+    - name: Dump all databases on the primary server
+      community.mysql.mysql_db:
+        name: all
+        state: dump
+        target: /tmp/all_databases.sql
         login_user: root
         login_password: "{{ mysql_root_password }}"
-        clone_from: "{{ replication_user }}@{{ primary_host }}:3306"
-        clone_password: "{{ replication_password }}"
+      delegate_to: "{{ primary_host }}"
+
+    - name: Fetch the database dump from the primary to the controller
+      ansible.builtin.fetch:
+        src: /tmp/all_databases.sql
+        dest: /tmp/
+        flat: yes
+      delegate_to: "{{ primary_host }}"
+
+    - name: Copy the database dump from the controller to the replica
+      ansible.builtin.copy:
+        src: /tmp/all_databases.sql
+        dest: /tmp/all_databases.sql
+        mode: '0644'
+
+    - name: Restore the database dump on the replica
+      community.mysql.mysql_db:
+        name: all
+        state: import
+        target: /tmp/all_databases.sql
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Unlock tables on the primary server
+      community.mysql.mysql_query:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        query: "UNLOCK TABLES;"
+      delegate_to: "{{ primary_host }}"
 
     - name: Configure replica with primary's info
       community.mysql.mysql_replication:
-        mode: changeprimary
-        primary_host: "{{ primary_host }}"
-        primary_user: "{{ replication_user }}"
-        primary_password: "{{ replication_password }}"
-        primary_log_file: "mysql-bin.000001"
-        primary_log_pos: 4
+        mode: changemaster
+        master_host: "{{ primary_host }}"
+        master_user: "{{ replication_user }}"
+        master_password: "{{ replication_password }}"
+        master_log_file: "{{ master_log_file }}"
+        master_log_pos: "{{ master_log_pos }}"
         login_user: root
         login_password: "{{ mysql_root_password }}"
 
-    - name: Start replication
+    - name: Start slave
       community.mysql.mysql_replication:
-        mode: startreplica
+        mode: startslave
         login_user: root
         login_password: "{{ mysql_root_password }}"
+
+    - name: Clean up dump file on replica
+      ansible.builtin.file:
+        path: /tmp/all_databases.sql
+        state: absent
+
+- name: Clean up on Primary and Controller
+  hosts: vm_private_a1
+  become: yes
+  tasks:
+    - name: Clean up dump file on primary
+      ansible.builtin.file:
+        path: /tmp/all_databases.sql
+        state: absent
+
+    - name: Clean up dump file on controller
+      ansible.builtin.file:
+        path: /tmp/all_databases.sql
+        state: absent
+      delegate_to: localhost
+      become: no
+
+- name: Final restart of MySQL on all database servers
+  hosts: dbservers
+  become: yes
+  tasks:
+    - name: Restart mysql service
+      ansible.builtin.service:
+        name: mysql
+        state: restarted
 

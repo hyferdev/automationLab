@@ -1,15 +1,27 @@
 ---
-- name: Setup APT Caching Proxy on Bastion
-  hosts: bastion
-  roles:
-    - role: apt_cacher
-
-- name: Install Percona Server on all DB hosts via Proxy
+- name: Install Percona Server on all DB hosts
   hosts: dbservers
   roles:
     - role: percona
 
-- name: Configure the Primary DB Server
+- name: Install Python MySQL library for Ansible modules
+  hosts: dbservers
+  become: yes
+  tasks:
+    - name: Install python3-pymysql
+      ansible.builtin.apt:
+        name: python3-pymysql
+        state: present
+        update_cache: yes
+
+- name: Secure MySQL installation on all DB hosts
+  hosts: dbservers
+  vars_files:
+    - vars/secrets.yml
+  roles:
+    - role: mysql_secure
+
+- name: Configure the Primary DB Server (post-security)
   hosts: vm_private_a1
   become: yes
   vars_files:
@@ -20,31 +32,29 @@
     test_db_name: "testdb"
     test_table_name: "widgets"
   tasks:
-    - name: Set the root password
-      ansible.builtin.command: "mysql -u root -e \"ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mysql_root_password }}';\""
-      changed_when: true
-
     - name: Remove anonymous users
-      ansible.builtin.command: "mysql -u root -p'{{ mysql_root_password }}' -e \"DELETE FROM mysql.user WHERE User='';\""
-      changed_when: true
-
-    - name: Disallow remote root login
-      ansible.builtin.command: "mysql -u root -p'{{ mysql_root_password }}' -e \"DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');\""
-      changed_when: true
-
-    - name: Create test database
-      community.mysql.mysql_db:
-        name: "{{ test_db_name }}"
-        state: present
+      community.mysql.mysql_user:
+        name: ''
+        host_all: yes
+        state: absent
         login_user: root
         login_password: "{{ mysql_root_password }}"
 
-    - name: Create test table
+    - name: Disallow remote root login
+      community.mysql.mysql_user:
+        name: root
+        host: '%'
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Create test database and table
       community.mysql.mysql_query:
         login_user: root
         login_password: "{{ mysql_root_password }}"
-        database: "{{ test_db_name }}"
-        query: "CREATE TABLE IF NOT EXISTS {{ test_table_name }} (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+        query:
+          - "CREATE DATABASE IF NOT EXISTS `{{ test_db_name }}`"
+          - "CREATE TABLE IF NOT EXISTS `{{ test_db_name }}`.`{{ test_table_name }}` (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
 
     - name: Create replication user
       community.mysql.mysql_user:

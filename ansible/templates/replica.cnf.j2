@@ -1,0 +1,10 @@
+# This file is managed by Ansible
+# It contains the specific configuration for the replica database server.
+[mysqld]
+server-id=2
+
+# --- Multi-Threaded Replication Settings ---
+# Set the number of worker threads, typically equal to the number of vCPUs.
+replica_parallel_workers=4
+replica_parallel_type=LOGICAL_CLOCK
+replica_preserve_commit_order=ON

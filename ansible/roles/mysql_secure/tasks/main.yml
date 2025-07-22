@@ -1,0 +1,18 @@
+---
+# tasks file for roles/mysql_secure
+
+- name: Change root user authentication and set password
+  ansible.builtin.shell: |
+    mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '{{ mysql_root_password }}';"
+  changed_when: true
+  become: yes
+
+- name: Create .my.cnf for root user to allow subsequent commands
+  ansible.builtin.template:
+    src: my.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: '0600'
+  become: yes
+
