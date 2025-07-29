@@ -21,3 +21,23 @@ variable "project_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "primary_vpc_attachment_id" {
+  description = "The TGW attachment ID for the primary VPC."
+  type        = string
+}
+
+variable "secondary_vpc_attachment_id" {
+  description = "The TGW attachment ID for the secondary VPC."
+  type        = string
+}
+
+variable "primary_vpc_cidr" {
+  description = "The CIDR block of the primary VPC."
+  type        = string
+}
+
+variable "secondary_vpc_cidr" {
+  description = "The CIDR block of the secondary VPC."
+  type        = string
+}
