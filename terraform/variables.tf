@@ -30,12 +30,12 @@ variable "standard_tags" {
   description = "Standard tags to apply to all resources."
   type        = map(string)
   default = {
-    owner          = "DBanyeretse"
-    costCenter     = "IT3125"
-    backup         = "false"
-    compliance     = "internal"
-    securityLevel  = "public"
-    ManagedBy      = "Terraform"
+    owner         = "DBanyeretse"
+    costCenter    = "IT3125"
+    backup        = "false"
+    compliance    = "internal"
+    securityLevel = "public"
+    ManagedBy     = "Terraform"
   }
 }
 
@@ -43,7 +43,7 @@ variable "project_tags" {
   description = "Tags specific to this project."
   type        = map(string)
   default = {
-    repository   = "automationLab"
+    repository = "automationLab"
   }
 }
 
