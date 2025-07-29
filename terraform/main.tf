@@ -82,7 +82,7 @@ module "vm_public_b" {
   subnet_id              = module.vpc.public_subnet_ids[1]
   ssh_key_name           = var.ssh_key_name
   ssh_access_cidr        = var.management_cidr
-  internal_traffic_cidrs = var.vpc_cidr
+  internal_traffic_cidrs = [var.vpc_cidr, var.secondary_vpc_cidr]
   standard_tags          = var.standard_tags
   project_tags           = merge(var.project_tags, { environment = var.environment })
 }
