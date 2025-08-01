@@ -15,3 +15,8 @@ output "private_subnet_ids" {
   description = "A list of the private subnet IDs."
   value       = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 }
+
+output "transit_gateway_attachment_id" {
+  description = "The ID of the Transit Gateway VPC attachment."
+  value       = aws_ec2_transit_gateway_vpc_attachment.main.id
+}
