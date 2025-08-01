@@ -1,5 +1,7 @@
+####################################################
 # /terraform/main.tf
 # This is the root configuration that calls modules.
+####################################################
 
 terraform {
   required_providers {

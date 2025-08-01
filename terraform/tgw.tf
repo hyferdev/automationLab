@@ -1,5 +1,7 @@
+#################################
 # --- Transit Gateway ---
 # Call the Transit Gateway module
+#################################
 module "tgw" {
   source = "./modules/tgw"
 

@@ -1,5 +1,7 @@
+################################################
 # --- Compute ---
 # Call the compute module once for each subnet.
+###############################################
 
 module "vm_public_b" {
   source = "./modules/compute"

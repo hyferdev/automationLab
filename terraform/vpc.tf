@@ -1,5 +1,7 @@
+#################################
 # --- VPC ---
 # Call the VPC module
+#################################
 module "vpc" {
   source = "./modules/vpc"
 
