@@ -22,22 +22,12 @@ variable "project_tags" {
   default     = {}
 }
 
-variable "primary_vpc_attachment_id" {
-  description = "The TGW attachment ID for the primary VPC."
-  type        = string
+variable "vpc_attachments" {
+  description = "A map of VPCs to attach to the Transit Gateway. The key is a logical name for the VPC."
+  type = map(object({
+    attachment_id = string
+    cidr_block    = string
+  }))
+  default = {}
 }
 
-variable "secondary_vpc_attachment_id" {
-  description = "The TGW attachment ID for the secondary VPC."
-  type        = string
-}
-
-variable "primary_vpc_cidr" {
-  description = "The CIDR block of the primary VPC."
-  type        = string
-}
-
-variable "secondary_vpc_cidr" {
-  description = "The CIDR block of the secondary VPC."
-  type        = string
-}

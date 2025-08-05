@@ -2,6 +2,7 @@
 # --- Transit Gateway ---
 # Call the Transit Gateway module
 #################################
+
 module "tgw" {
   source = "./modules/tgw"
 
@@ -10,8 +11,10 @@ module "tgw" {
   standard_tags = var.standard_tags
   project_tags  = merge(var.project_tags, { environment = var.environment })
 
-  primary_vpc_attachment_id   = module.vpc.transit_gateway_attachment_id
-  secondary_vpc_attachment_id = module.vpc_secondary.transit_gateway_attachment_id
-  primary_vpc_cidr            = var.vpc_cidr
-  secondary_vpc_cidr          = var.secondary_vpc_cidr
+  vpc_attachments = {
+    for key, vpc_module in module.vpc : key => {
+      attachment_id = vpc_module.transit_gateway_attachment_id
+      cidr_block    = var.vpcs[key].vpc_cidr
+    }
+  }
 }

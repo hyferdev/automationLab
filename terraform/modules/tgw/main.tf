@@ -21,24 +21,17 @@ resource "aws_ec2_transit_gateway_route_table" "main" {
   })
 }
 
-resource "aws_ec2_transit_gateway_route_table_association" "primary" {
-  transit_gateway_attachment_id  = var.primary_vpc_attachment_id
+resource "aws_ec2_transit_gateway_route_table_association" "vpcs" {
+  for_each = var.vpc_attachments
+
+  transit_gateway_attachment_id  = each.value.attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main.id
 }
 
-resource "aws_ec2_transit_gateway_route_table_association" "secondary" {
-  transit_gateway_attachment_id  = var.secondary_vpc_attachment_id
-  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main.id
-}
+resource "aws_ec2_transit_gateway_route" "to_vpcs" {
+  for_each = var.vpc_attachments
 
-resource "aws_ec2_transit_gateway_route" "to_primary" {
-  destination_cidr_block         = var.primary_vpc_cidr
-  transit_gateway_attachment_id  = var.primary_vpc_attachment_id
-  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main.id
-}
-
-resource "aws_ec2_transit_gateway_route" "to_secondary" {
-  destination_cidr_block         = var.secondary_vpc_cidr
-  transit_gateway_attachment_id  = var.secondary_vpc_attachment_id
+  destination_cidr_block         = each.value.cidr_block
+  transit_gateway_attachment_id  = each.value.attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main.id
 }

@@ -54,66 +54,39 @@ variable "environment" {
 }
 
 # --- Network CIDR Variables ---
-variable "vpc_cidr" {
-  description = "The main CIDR block for the VPC."
-  type        = string
-  default     = "10.95.0.0/20"
+variable "vpcs" {
+  description = "A map of VPC configurations. The key of each item is the logical name of the VPC (e.g., 'primary', 'secondary')."
+  type = map(object({
+    vpc_cidr               = string
+    public_subnet_a_cidr   = string
+    public_subnet_b_cidr   = string
+    private_subnet_a_cidr  = string
+    private_subnet_b_cidr  = string
+  }))
+  default = {
+    primary = {
+      vpc_cidr               = "10.100.0.0/16"
+      public_subnet_a_cidr   = "10.100.10.0/24"
+      public_subnet_b_cidr   = "10.100.20.0/24"
+      private_subnet_a_cidr  = "10.100.30.0/24"
+      private_subnet_b_cidr  = "10.100.40.0/24"
+    },
+    secondary = {
+      vpc_cidr               = "10.250.0.0/16"
+      public_subnet_a_cidr   = "10.250.10.0/24"
+      public_subnet_b_cidr   = "10.250.20.0/24"
+      private_subnet_a_cidr  = "10.250.30.0/24"
+      private_subnet_b_cidr  = "10.250.40.0/24"
+    }
+    natasha = {
+      vpc_cidr               = "10.15.0.0/16"
+      public_subnet_a_cidr   = "10.15.10.0/24"
+      public_subnet_b_cidr   = "10.15.20.0/24"
+      private_subnet_a_cidr  = "10.15.30.0/24"
+      private_subnet_b_cidr  = "10.15.40.0/24"
+    }
+  }
 }
-
-variable "public_subnet_a_cidr" {
-  description = "CIDR block for the public subnet in AZ a."
-  type        = string
-  default     = "10.95.1.0/24"
-}
-
-variable "public_subnet_b_cidr" {
-  description = "CIDR block for the public subnet in AZ b."
-  type        = string
-  default     = "10.95.2.0/24"
-}
-
-variable "private_subnet_a_cidr" {
-  description = "CIDR block for the private subnet in AZ a."
-  type        = string
-  default     = "10.95.10.0/24"
-}
-
-variable "private_subnet_b_cidr" {
-  description = "CIDR block for the private subnet in AZ b."
-  type        = string
-  default     = "10.95.20.0/24"
-}
-
-variable "secondary_vpc_cidr" {
-  description = "The main CIDR block for the secondary VPC."
-  type        = string
-  default     = "10.250.0.0/16"
-}
-
-variable "secondary_public_subnet_a_cidr" {
-  description = "CIDR block for the secondary VPC's public subnet in AZ a."
-  type        = string
-  default     = "10.250.10.0/24"
-}
-
-variable "secondary_public_subnet_b_cidr" {
-  description = "CIDR block for the secondary VPC's public subnet in AZ b."
-  type        = string
-  default     = "10.250.20.0/24"
-}
-
-variable "secondary_private_subnet_a_cidr" {
-  description = "CIDR block for the secondary VPC's private subnet in AZ a."
-  type        = string
-  default     = "10.250.30.0/24"
-}
-
-variable "secondary_private_subnet_b_cidr" {
-  description = "CIDR block for the secondary VPC's private subnet in AZ b."
-  type        = string
-  default     = "10.250.40.0/24"
-}
-
 
 # --- Compute Variables ---
 variable "instance_type" {
