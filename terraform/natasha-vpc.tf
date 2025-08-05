@@ -15,7 +15,7 @@ module "Natasha-vpc" {
   transit_gateway_id    = module.tgw.transit_gateway_id
 
   # Pass naming and tagging variables
-  project_name  = var.project_name
+  project_name  = "${var.project_name}-natasha"
   standard_tags = var.standard_tags
   project_tags  = merge(var.project_tags, { environment = var.environment })
   environment   = var.environment
