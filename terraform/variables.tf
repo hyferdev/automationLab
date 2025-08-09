@@ -85,6 +85,13 @@ variable "vpcs" {
       private_subnet_a_cidr  = "10.15.30.0/24"
       private_subnet_b_cidr  = "10.15.40.0/24"
     }
+    fre = {
+      vpc_cidr               = "10.150.0.0/16"
+      public_subnet_a_cidr   = "10.150.14.0/24"
+      public_subnet_b_cidr   = "10.150.24.0/24"
+      private_subnet_a_cidr  = "10.150.34.0/24"
+      private_subnet_b_cidr  = "10.150.44.0/24"
+    }
   }
 }
 
