@@ -41,11 +41,11 @@ resource "aws_security_group" "instance_sg" {
   }
 
   ingress {
-    description = "Allow all internal VPC traffic"
-    from_port   = 0    # 0 means all ports
-    to_port     = 0    # 0 means all ports
-    protocol    = "-1" # -1 means all protocols
-    cidr_blocks = [var.internal_traffic_cidr]
+    description = "Allow all internal network traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = var.internal_traffic_cidrs
   }
 
   egress {

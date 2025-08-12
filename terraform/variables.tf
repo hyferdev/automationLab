@@ -1,5 +1,7 @@
+#########################
+# --- Variables ---
 # /terraform/variables.tf
-# These are the variables for the root module.
+#########################
 
 variable "aws_region" {
   description = "The AWS region to deploy resources in."
@@ -30,12 +32,12 @@ variable "standard_tags" {
   description = "Standard tags to apply to all resources."
   type        = map(string)
   default = {
-    owner          = "DBanyeretse"
-    costCenter     = "IT3125"
-    backup         = "false"
-    compliance     = "internal"
-    securityLevel  = "public"
-    ManagedBy      = "Terraform"
+    owner         = "DBanyeretse"
+    costCenter    = "IT3125"
+    backup        = "false"
+    compliance    = "internal"
+    securityLevel = "public"
+    ManagedBy     = "Terraform"
   }
 }
 
@@ -43,48 +45,25 @@ variable "project_tags" {
   description = "Tags specific to this project."
   type        = map(string)
   default = {
-    repository   = "automationLab"
+    repository = "automationLab"
   }
 }
 
 variable "environment" {
   description = "The deployment environment name (e.g., dev, prod), derived from the Git branch."
   type        = string
-}
-
-# --- Network CIDR Variables ---
-variable "vpc_cidr" {
-  description = "The main CIDR block for the VPC."
-  type        = string
-}
-
-variable "public_subnet_a_cidr" {
-  description = "CIDR block for the public subnet in AZ a."
-  type        = string
-}
-
-variable "public_subnet_b_cidr" {
-  description = "CIDR block for the public subnet in AZ b."
-  type        = string
-}
-
-variable "private_subnet_a_cidr" {
-  description = "CIDR block for the private subnet in AZ a."
-  type        = string
-}
-
-variable "private_subnet_b_cidr" {
-  description = "CIDR block for the private subnet in AZ b."
-  type        = string
+  default     = "dev"
 }
 
 # --- Compute Variables ---
 variable "instance_type" {
   description = "The EC2 instance type for the test VMs."
   type        = string
+  default     = "t2.micro"
 }
 
 variable "ssh_key_name" {
   description = "The name of an existing EC2 Key Pair for SSH access."
   type        = string
 }
+

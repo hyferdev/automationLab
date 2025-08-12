@@ -30,9 +30,9 @@ variable "ssh_access_cidr" {
   type        = string
 }
 
-variable "internal_traffic_cidr" {
-  description = "The CIDR block for internal traffic within the VPC."
-  type        = string
+variable "internal_traffic_cidrs" {
+  description = "A list of CIDR blocks for internal traffic within the network."
+  type        = list(string)
 }
 
 variable "standard_tags" {

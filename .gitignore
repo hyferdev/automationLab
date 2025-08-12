@@ -1,6 +1,7 @@
-# Terraform local files
+# Github ignored files
 .terraform/
 *.tfstate
 *.tfstate.*
 *.tfvars
 backend_override.tf
+.archive/
