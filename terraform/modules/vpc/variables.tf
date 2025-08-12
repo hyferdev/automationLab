@@ -58,11 +58,6 @@ variable "transit_gateway_id" {
   type        = string
 }
 
-variable "transit_gateway_id" {
-  description = "The ID of the Transit Gateway to attach to."
-  type        = string
-}
-
 variable "all_vpc_cidrs" {
   description = "A map of all VPC CIDR blocks in the environment, used for routing. The key is the logical VPC name, value is the CIDR."
   type        = map(string)

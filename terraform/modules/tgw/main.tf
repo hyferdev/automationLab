@@ -32,25 +32,13 @@ resource "aws_ec2_transit_gateway_route_table_association" "vpcs" {
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main.id
 }
 
-# Create routes for inter-VPC communication
-# This logic creates a full mesh: a route from every VPC to every other VPC.
+# Create a static route for each VPC in the TGW route table.
+# This allows other VPCs to route traffic to this VPC.
 resource "aws_ec2_transit_gateway_route" "to_vpcs" {
-  # Create a flattened list of all possible route combinations
-  for_each = {
-    for from_key, from_vpc in var.vpc_attachments :
-    for to_key, to_vpc in var.vpc_attachments :
-    # Only create a route if the source and destination are different
-    if from_key != to_key :
-    "${from_key}-to-${to_key}" => {
-      from_attachment_id = from_vpc.attachment_id
-      to_cidr_block      = to_vpc.cidr_block
-      # This is the attachment that traffic will be routed *through* to reach the destination
-      route_attachment_id = to_vpc.attachment_id
-    }
-  }
+  for_each = var.vpc_attachments
 
-  destination_cidr_block         = each.value.to_cidr_block
-  transit_gateway_attachment_id  = each.value.route_attachment_id
+  destination_cidr_block         = each.value.cidr_block
+  transit_gateway_attachment_id  = each.value.attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main.id
 }
 
