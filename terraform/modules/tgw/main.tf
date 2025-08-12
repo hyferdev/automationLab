@@ -42,3 +42,25 @@ resource "aws_ec2_transit_gateway_route" "to_vpcs" {
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main.id
 }
 
+# --- Spoke VPC Attachments ---
+resource "aws_ec2_transit_gateway_route" "spoke_to_security" {
+  for_each = {
+    for k, v in var.vpc_attachments : k => v if k != "security"
+  }
+
+  destination_cidr_block         = "0.0.0.0/0"
+  transit_gateway_attachment_id  = var.vpc_attachments["security"].attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main.id
+}
+
+# --- Security VPC Attachment ---
+resource "aws_ec2_transit_gateway_route" "security_to_spokes" {
+  for_each = {
+    for k, v in var.vpc_attachments : k => v if k != "security"
+  }
+
+  destination_cidr_block         = each.value.cidr_block
+  transit_gateway_attachment_id  = each.value.attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main.id
+}
+

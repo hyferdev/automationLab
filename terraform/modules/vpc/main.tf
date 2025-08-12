@@ -89,6 +89,44 @@ resource "aws_route_table_association" "public_b" {
   route_table_id = aws_route_table.public_rt.id
 }
 
+# --- FortiGate Subnet (only created if a CIDR is provided) ---
+resource "aws_subnet" "fortigate_a" {
+  count = var.fortigate_subnet_a_cidr != null ? 1 : 0
+
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.fortigate_subnet_a_cidr
+  availability_zone = var.availability_zones[0]
+
+  tags = merge(var.standard_tags, var.project_tags, {
+    Name = "${var.project_name}-${var.environment}-fortigate-subnet-a"
+  })
+}
+
+# --- FortiGate Route Table ---
+resource "aws_route_table" "fortigate_rt" {
+  count = var.fortigate_subnet_a_cidr != null ? 1 : 0
+
+  vpc_id = aws_vpc.main.id
+
+  # Default route to the Internet Gateway
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main_gw.id
+  }
+
+  tags = merge(var.standard_tags, var.project_tags, {
+    Name = "${var.project_name}-${var.environment}-fortigate-rt"
+  })
+}
+
+# --- FortiGate Route Table Association ---
+resource "aws_route_table_association" "fortigate_a" {
+  count = var.fortigate_subnet_a_cidr != null ? 1 : 0
+
+  subnet_id      = aws_subnet.fortigate_a[0].id
+  route_table_id = aws_route_table.fortigate_rt[0].id
+}
+
 # --- Transit Gateway Attachment ---
 resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
   subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
@@ -124,3 +162,5 @@ resource "aws_route_table_association" "private_b" {
   subnet_id      = aws_subnet.private_b.id
   route_table_id = aws_route_table.private_rt.id
 }
+
+

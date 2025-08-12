@@ -63,3 +63,9 @@ variable "all_vpc_cidrs" {
   type        = map(string)
   default     = {}
 }
+
+variable "fortigate_subnet_a_cidr" {
+  description = "CIDR block for the FortiGate subnet in AZ a."
+  type        = string
+  default     = null
+}

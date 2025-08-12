@@ -22,28 +22,31 @@ module "vpc" {
 
 # --- Define VPCs --- 
 variable "vpcs" {
-  description = "A map of VPC configurations. The key of each item is the logical name of the VPC (e.g., 'primary', 'secondary')."
+  description = "A map of VPC configurations. The key of each item is the logical name of the VPC."
   type = map(object({
     vpc_cidr              = string
     public_subnet_a_cidr  = string
     public_subnet_b_cidr  = string
     private_subnet_a_cidr = string
     private_subnet_b_cidr = string
+    fortigate_subnet_a_cidr = string
   }))
   default = {
-    primary = {
+    security = {
+      vpc_cidr              = "10.0.0.0/16"
+      public_subnet_a_cidr  = "10.0.1.0/24"
+      public_subnet_b_cidr  = "10.0.2.0/24"
+      private_subnet_a_cidr = "10.0.3.0/24"
+      private_subnet_b_cidr = "10.0.4.0/24"
+      fortigate_subnet_a_cidr = "10.0.5.0/24"
+    }
+    des = {
       vpc_cidr              = "10.100.0.0/16"
       public_subnet_a_cidr  = "10.100.10.0/24"
       public_subnet_b_cidr  = "10.100.20.0/24"
       private_subnet_a_cidr = "10.100.30.0/24"
       private_subnet_b_cidr = "10.100.40.0/24"
-    },
-    secondary = {
-      vpc_cidr              = "10.250.0.0/16"
-      public_subnet_a_cidr  = "10.250.10.0/24"
-      public_subnet_b_cidr  = "10.250.20.0/24"
-      private_subnet_a_cidr = "10.250.30.0/24"
-      private_subnet_b_cidr = "10.250.40.0/24"
+      fortigate_subnet_a_cidr = null
     }
     natasha = {
       vpc_cidr              = "10.15.0.0/16"
@@ -51,6 +54,7 @@ variable "vpcs" {
       public_subnet_b_cidr  = "10.15.20.0/24"
       private_subnet_a_cidr = "10.15.30.0/24"
       private_subnet_b_cidr = "10.15.40.0/24"
+      fortigate_subnet_a_cidr = null
     }
     fre = {
       vpc_cidr              = "10.150.0.0/16"
@@ -58,6 +62,7 @@ variable "vpcs" {
       public_subnet_b_cidr  = "10.150.24.0/24"
       private_subnet_a_cidr = "10.150.34.0/24"
       private_subnet_b_cidr = "10.150.44.0/24"
+      fortigate_subnet_a_cidr = null
     }
     pat = {
       vpc_cidr              = "10.151.0.0/16"
@@ -65,6 +70,7 @@ variable "vpcs" {
       public_subnet_b_cidr  = "10.151.24.0/24"
       private_subnet_a_cidr = "10.151.34.0/24"
       private_subnet_b_cidr = "10.151.44.0/24"
+      fortigate_subnet_a_cidr = null
     }
   }
 }
