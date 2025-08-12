@@ -1,5 +1,7 @@
+#########################
+# --- Variables ---
 # /terraform/variables.tf
-# These are the variables for the root module.
+#########################
 
 variable "aws_region" {
   description = "The AWS region to deploy resources in."
