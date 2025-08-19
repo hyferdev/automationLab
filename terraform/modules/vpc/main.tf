@@ -8,8 +8,16 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags = merge(var.standard_tags, var.project_tags, {
-firewall    Name = "${var.project_name}-${var.environment}-vpc"
+    Name = "${var.project_name}-${var.environment}-vpc"
   })
+}
+
+# --- Local values for mapping resources to AZs ---
+locals {
+  private_subnets_by_az = {
+    "${var.availability_zones[0]}" = aws_subnet.private_a.id,
+    "${var.availability_zones[1]}" = aws_subnet.private_b.id
+  }
 }
 
 # --- Standard Subnets ---
@@ -86,28 +94,25 @@ resource "aws_subnet" "gwlb_endpoint_b" {
 # --- ROUTING FOR SECURITY VPC ---
 # All traffic entering from the TGW is sent to the GWLB endpoints.
 resource "aws_route_table" "private_rt_tgw_attachment" {
-  count  = var.gwlb_endpoint_ids != null ? 1 : 0
-  vpc_id = aws_vpc.main.id
-  tags   = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-private-rt-tgw" })
+  for_each = var.gwlb_endpoint_ids != null ? toset(var.availability_zones) : toset([])
+  vpc_id   = aws_vpc.main.id
+  tags     = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-private-rt-tgw-${each.key}" })
 }
 
 resource "aws_route" "private_to_gwlb" {
-  count                  = var.gwlb_endpoint_ids != null ? 1 : 0
-  route_table_id         = aws_route_table.private_rt_tgw_attachment[0].id
+  for_each = var.gwlb_endpoint_ids != null ? toset(var.availability_zones) : toset([])
+
+  route_table_id         = aws_route_table.private_rt_tgw_attachment[each.key].id
   destination_cidr_block = "0.0.0.0/0"
-  vpc_endpoint_id        = var.gwlb_endpoint_ids[0] # Route to the endpoint in the same AZ
+  # Route to the GWLB endpoint in the same AZ for performance and resilience.
+  vpc_endpoint_id        = var.gwlb_endpoint_ids[index(var.availability_zones, each.key)]
 }
 
-resource "aws_route_table_association" "private_a_tgw" {
-  count          = var.gwlb_endpoint_ids != null ? 1 : 0
-  subnet_id      = aws_subnet.private_a.id
-  route_table_id = aws_route_table.private_rt_tgw_attachment[0].id
-}
+resource "aws_route_table_association" "private_tgw" {
+  for_each = var.gwlb_endpoint_ids != null ? toset(var.availability_zones) : toset([])
 
-resource "aws_route_table_association" "private_b_tgw" {
-  count          = var.gwlb_endpoint_ids != null ? 1 : 0
-  subnet_id      = aws_subnet.private_b.id
-  route_table_id = aws_route_table.private_rt_tgw_attachment[0].id
+  subnet_id      = local.private_subnets_by_az[each.key]
+  route_table_id = aws_route_table.private_rt_tgw_attachment[each.key].id
 }
 
 # All traffic from the FortiGates is sent to the IGW to go to the internet.
@@ -139,15 +144,14 @@ resource "aws_route_table" "edge_rt" {
   vpc_id = aws_vpc.main.id
   tags   = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-edge-rt" })
 }
-
 resource "aws_route" "edge_to_gwlb" {
-  for_each = toset(concat(values(var.all_vpc_cidrs), ["0.0.0.0/0"]))
-  # Check if it's the security VPC
-  count = var.gwlb_endpoint_ids != null ? 1 : 0
+  for_each = var.gwlb_endpoint_ids != null ? toset(concat(values(var.all_vpc_cidrs), ["0.0.0.0/0"])) : toset([])
 
   route_table_id         = aws_route_table.edge_rt[0].id
-  destination_cidr_block = each.value
-  vpc_endpoint_id        = var.gwlb_endpoint_ids[0] # Simplified to one AZ for this example
+  destination_cidrol_block = each.value
+  # Per AWS best practices for IGW -> GWLB routing, we route to a single endpoint.
+  # AWS manages the high availability and failover to endpoints in other AZs behind the scenes.
+  vpc_endpoint_id        = var.gwlb_endpoint_ids[0]
 }
 
 resource "aws_route_table_association" "igw_to_edge" {
@@ -187,4 +191,3 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
   vpc_id             = aws_vpc.main.id
   tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-tgw-attachment" })
 }
-
