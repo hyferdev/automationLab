@@ -11,6 +11,11 @@ module "vpc" {
   public_subnet_b_cidr   = each.value.public_subnet_b_cidr
   private_subnet_a_cidr  = each.value.private_subnet_a_cidr
   private_subnet_b_cidr  = each.value.private_subnet_b_cidr
+
+  appliance_subnet_a_cidr     = each.value.appliance_subnet_a_cidr
+  appliance_subnet_b_cidr     = each.value.appliance_subnet_b_cidr
+  gwlb_endpoint_subnet_a_cidr = each.value.gwlb_endpoint_subnet_a_cidr
+  gwlb_endpoint_subnet_b_cidr = each.value.gwlb_endpoint_subnet_b_cidr
   
   availability_zones     = var.availability_zones
   project_name           = "${var.project_name}-${each.key}"

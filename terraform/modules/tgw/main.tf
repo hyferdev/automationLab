@@ -34,7 +34,7 @@ resource "aws_ec2_transit_gateway_route_table_association" "spokes" {
 resource "aws_ec2_transit_gateway_route_table_association" "security" {
   # Assuming 'security' VPC attachment exists in var.vpc_attachments
   transit_gateway_attachment_id  = var.vpc_attachments["security"].attachment_id
-  transit_gateway_route_table_id = aws_ec2_transit_gateway.main.association_default_route_table_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spoke_rt.id
 }
 
 # --- Default Route for Spokes ---
