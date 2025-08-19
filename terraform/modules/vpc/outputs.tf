@@ -26,12 +26,12 @@ output "private_subnet_ids_by_az" {
 
 output "appliance_subnet_ids" {
   description = "A list of the appliance subnet IDs."
-  value       = aws_subnet.appliance_a.*.id
+  value       = concat(aws_subnet.appliance_a.*.id, aws_subnet.appliance_b.*.id)
 }
 
 output "gwlb_endpoint_subnet_ids" {
   description = "A list of the GWLB endpoint subnet IDs."
-  value       = aws_subnet.gwlb_endpoint_a.*.id
+  value       = concat(aws_subnet.gwlb_endpoint_a.*.id, aws_subnet.gwlb_endpoint_b.*.id)
 }
 
 output "internet_gateway_id" {
