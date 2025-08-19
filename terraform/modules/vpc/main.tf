@@ -57,7 +57,7 @@ resource "aws_internet_gateway" "main_gw" {
   tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-igw" })
 }
 
-# --- New Appliance Subnets (for FortiGates) ---
+# --- Appliance Subnets (for FortiGates) ---
 resource "aws_subnet" "appliance_a" {
   count = var.appliance_subnet_a_cidr != null ? 1 : 0
   vpc_id            = aws_vpc.main.id
@@ -65,7 +65,6 @@ resource "aws_subnet" "appliance_a" {
   availability_zone = var.availability_zones[0]
   tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-appliance-subnet-a" })
 }
-
 resource "aws_subnet" "appliance_b" {
   count = var.appliance_subnet_b_cidr != null ? 1 : 0
   vpc_id            = aws_vpc.main.id
@@ -74,7 +73,7 @@ resource "aws_subnet" "appliance_b" {
   tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-appliance-subnet-b" })
 }
 
-# --- New GWLB Endpoint Subnets ---
+# --- GWLB Endpoint Subnets ---
 resource "aws_subnet" "gwlb_endpoint_a" {
   count = var.gwlb_endpoint_subnet_a_cidr != null ? 1 : 0
   vpc_id            = aws_vpc.main.id
@@ -91,31 +90,7 @@ resource "aws_subnet" "gwlb_endpoint_b" {
   tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-gwlb-endpoint-subnet-b" })
 }
 
-# --- ROUTING FOR SECURITY VPC ---
-# All traffic entering from the TGW is sent to the GWLB endpoints.
-resource "aws_route_table" "private_rt_tgw_attachment" {
-  for_each = var.gwlb_endpoint_ids != null ? toset(var.availability_zones) : toset([])
-  vpc_id   = aws_vpc.main.id
-  tags     = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-private-rt-tgw-${each.key}" })
-}
-
-resource "aws_route" "private_to_gwlb" {
-  for_each = var.gwlb_endpoint_ids != null ? toset(var.availability_zones) : toset([])
-
-  route_table_id         = aws_route_table.private_rt_tgw_attachment[each.key].id
-  destination_cidr_block = "0.0.0.0/0"
-  # Route to the GWLB endpoint in the same AZ for performance and resilience.
-  vpc_endpoint_id        = var.gwlb_endpoint_ids[index(var.availability_zones, each.key)]
-}
-
-resource "aws_route_table_association" "private_tgw" {
-  for_each = var.gwlb_endpoint_ids != null ? toset(var.availability_zones) : toset([])
-
-  subnet_id      = local.private_subnets_by_az[each.key]
-  route_table_id = aws_route_table.private_rt_tgw_attachment[each.key].id
-}
-
-# All traffic from the FortiGates is sent to the IGW to go to the internet.
+# --- ROUTING ---
 resource "aws_route_table" "appliance_rt" {
   count  = var.appliance_subnet_a_cidr != null ? 1 : 0
   vpc_id = aws_vpc.main.id
@@ -138,32 +113,9 @@ resource "aws_route_table_association" "appliance_b" {
   route_table_id = aws_route_table.appliance_rt[0].id
 }
 
-# Directs all inbound traffic from the internet and from spoke VPCs to the GWLB endpoints.
-resource "aws_route_table" "edge_rt" {
-  count  = var.gwlb_endpoint_ids != null ? 1 : 0
-  vpc_id = aws_vpc.main.id
-  tags   = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-edge-rt" })
-}
-resource "aws_route" "edge_to_gwlb" {
-  for_each = var.gwlb_endpoint_ids != null ? toset(concat(values(var.all_vpc_cidrs), ["0.0.0.0/0"])) : toset([])
-
-  route_table_id         = aws_route_table.edge_rt[0].id
-  destination_cidrol_block = each.value
-  # Per AWS best practices for IGW -> GWLB routing, we route to a single endpoint.
-  # AWS manages the high availability and failover to endpoints in other AZs behind the scenes.
-  vpc_endpoint_id        = var.gwlb_endpoint_ids[0]
-}
-
-resource "aws_route_table_association" "igw_to_edge" {
-  count          = var.gwlb_endpoint_ids != null ? 1 : 0
-  gateway_id     = aws_internet_gateway.main_gw.id
-  route_table_id = aws_route_table.edge_rt[0].id
-}
-
-# --- ROUTING FOR SPOKE VPCs ---
-# Default route table for private subnets in spoke VPCs
 resource "aws_route_table" "private_rt_spoke" {
-  count  = var.gwlb_endpoint_ids == null ? 1 : 0 # Only create for spoke VPCs
+  # Only create this for spoke VPCs (i.e., those without appliance subnets)
+  count  = var.appliance_subnet_a_cidr == null ? 1 : 0
   vpc_id = aws_vpc.main.id
   route {
     cidr_block         = "0.0.0.0/0"
@@ -173,13 +125,13 @@ resource "aws_route_table" "private_rt_spoke" {
 }
 
 resource "aws_route_table_association" "private_a_spoke" {
-  count          = var.gwlb_endpoint_ids == null ? 1 : 0
+  count          = var.appliance_subnet_a_cidr == null ? 1 : 0
   subnet_id      = aws_subnet.private_a.id
   route_table_id = aws_route_table.private_rt_spoke[0].id
 }
 
 resource "aws_route_table_association" "private_b_spoke" {
-  count          = var.gwlb_endpoint_ids == null ? 1 : 0
+  count          = var.appliance_subnet_a_cidr == null ? 1 : 0
   subnet_id      = aws_subnet.private_b.id
   route_table_id = aws_route_table.private_rt_spoke[0].id
 }
@@ -191,3 +143,4 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
   vpc_id             = aws_vpc.main.id
   tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-tgw-attachment" })
 }
+

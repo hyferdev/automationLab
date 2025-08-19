@@ -19,9 +19,6 @@ module "vpc" {
   project_tags           = merge(var.project_tags, { environment = var.environment })
   transit_gateway_id     = module.tgw.transit_gateway_id
   all_vpc_cidrs        = { for k, v in var.vpcs : k => v.vpc_cidr }
-
-  # Pass GWLB endpoints to the security VPC for routing
-  gwlb_endpoint_ids = each.key == "security" ? values(aws_vpc_endpoint.gwlb_endpoints)[*].id : null
 }
 
 # --- VPC Definitions ---
