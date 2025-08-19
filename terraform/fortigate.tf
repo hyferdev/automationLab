@@ -11,42 +11,27 @@ data "aws_ami" "fortigate" {
   }
 }
 
-# Security group for the FortiGate instance
-resource "aws_security_group" "fortigate_sg" {
-  name        = "${var.project_name}-fortigate-sg"
-  description = "Allow all traffic to/from the FortiGate"
-  vpc_id      = module.vpc["security"].vpc_id
+resource "aws_instance" "fortigate" {
+  for_each = toset(var.availability_zones)
 
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  ami           = data.aws_ami.fortigate.id
+  instance_type = "c5.large" # Recommended size for FortiGate
+  key_name      = var.ssh_key_name
+  subnet_id     = module.vpc["security"].appliance_subnet_ids[index(var.availability_zones, each.key)]
+  
+  # Disable source/destination check is critical for firewall appliances
+  source_dest_check = false
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(var.standard_tags, {
-    Name = "${var.project_name}-fortigate-sg"
+  tags = merge(var.standard_tags, var.project_tags, {
+    Name = "${var.project_name}-fortigate-${each.key}"
   })
 }
 
-# FortiGate instance
-resource "aws_instance" "fortigate" {
-  ami           = data.aws_ami.fortigate.id
-  instance_type = "c5.large" # Recommended size for FortiGate
-  subnet_id     = module.vpc["security"].public_subnet_ids[0]
-  key_name      = var.ssh_key_name
+# Attach each FortiGate instance to the GWLB Target Group
+resource "aws_lb_target_group_attachment" "fortigate_attachment" {
+  for_each = aws_instance.fortigate
 
-  vpc_security_group_ids = [aws_security_group.fortigate_sg.id]
-
-  tags = merge(var.standard_tags, {
-    Name = "${var.project_name}-fortigate-vm"
-  })
+  target_group_arn = aws_lb_target_group.fortigate_tg.arn
+  target_id        = each.value.id
 }
 

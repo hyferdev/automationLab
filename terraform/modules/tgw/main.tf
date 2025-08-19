@@ -16,54 +16,31 @@ resource "aws_ec2_transit_gateway" "main" {
   })
 }
 
-# --- Route Table for the Security (Hub) VPC ---
-resource "aws_ec2_transit_gateway_route_table" "security_rt" {
-  transit_gateway_id = aws_ec2_transit_gateway.main.id
-
-  tags = merge(var.standard_tags, var.project_tags, {
-    Name = "${var.project_name}-${var.environment}-tgw-security-rt"
-  })
-}
-
-# --- Route Table for the Spoke VPCs ---
+# --- Route Table for Spoke VPCs ---
 resource "aws_ec2_transit_gateway_route_table" "spoke_rt" {
   transit_gateway_id = aws_ec2_transit_gateway.main.id
-
-  tags = merge(var.standard_tags, var.project_tags, {
-    Name = "${var.project_name}-${var.environment}-tgw-spoke-rt"
-  })
+  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-tgw-spoke-rt" })
 }
 
-# --- Associate VPCs with the appropriate TGW Route Table ---
-resource "aws_ec2_transit_gateway_route_table_association" "vpcs" {
-  for_each = var.vpc_attachments
+# --- Associate Spoke VPCs with the Spoke Route Table ---
+resource "aws_ec2_transit_gateway_route_table_association" "spokes" {
+  for_each = { for k, v in var.vpc_attachments : k => v if k != "security" }
 
-  transit_gateway_attachment_id = each.value.attachment_id
-  # Associate the 'security' VPC with the security_rt, and all others with the spoke_rt
-  transit_gateway_route_table_id = each.key == "security" ? aws_ec2_transit_gateway_route_table.security_rt.id : aws_ec2_transit_gateway_route_table.spoke_rt.id
+  transit_gateway_attachment_id  = each.value.attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spoke_rt.id
 }
 
+# --- Associate Security VPC with the TGW (it doesn't need a separate table) ---
+resource "aws_ec2_transit_gateway_route_table_association" "security" {
+  # Assuming 'security' VPC attachment exists in var.vpc_attachments
+  transit_gateway_attachment_id  = var.vpc_attachments["security"].attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway.main.association_default_route_table_id
+}
 
-# --- Define Routes ---
-
-# 1. In the SPOKE route table, create a single default route to the security VPC attachment.
-# This forces all traffic from spokes through the firewall.
-resource "aws_ec2_transit_gateway_route" "spokes_to_security_hub" {
+# --- Default Route for Spokes ---
+# In the spoke route table, send ALL traffic to the security VPC attachment.
+resource "aws_ec2_transit_gateway_route" "spokes_to_security" {
   destination_cidr_block         = "0.0.0.0/0"
   transit_gateway_attachment_id  = var.vpc_attachments["security"].attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spoke_rt.id
 }
-
-# 2. In the SECURITY route table, create routes for each spoke VPC's CIDR.
-# This allows the firewall to route traffic back to the correct spoke.
-resource "aws_ec2_transit_gateway_route" "security_hub_to_spokes" {
-  # Only create routes for non-security VPCs
-  for_each = {
-    for k, v in var.vpc_attachments : k => v if k != "security"
-  }
-
-  destination_cidr_block         = each.value.cidr_block
-  transit_gateway_attachment_id  = each.value.attachment_id
-  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.security_rt.id
-}
-

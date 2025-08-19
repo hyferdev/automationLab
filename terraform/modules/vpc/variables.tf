@@ -69,3 +69,33 @@ variable "fortigate_subnet_a_cidr" {
   type        = string
   default     = null
 }
+
+variable "appliance_subnet_a_cidr" {
+  description = "CIDR for the appliance subnet in AZ a."
+  type        = string
+  default     = null
+}
+
+variable "appliance_subnet_b_cidr" {
+  description = "CIDR for the appliance subnet in AZ b."
+  type        = string
+  default     = null
+}
+
+variable "gwlb_endpoint_subnet_a_cidr" {
+  description = "CIDR for the GWLB endpoint subnet in AZ a."
+  type        = string
+  default     = null
+}
+
+variable "gwlb_endpoint_subnet_b_cidr" {
+  description = "CIDR for the GWLB endpoint subnet in AZ b."
+  type        = string
+  default     = null
+}
+
+variable "gwlb_endpoint_ids" {
+  description = "List of GWLB VPC Endpoint IDs."
+  type        = list(string)
+  default     = null
+}
