@@ -29,9 +29,11 @@ output "appliance_subnet_ids" {
   value       = concat(aws_subnet.appliance_a.*.id, aws_subnet.appliance_b.*.id)
 }
 
-output "gwlb_endpoint_subnet_ids" {
-  description = "A list of the GWLB endpoint subnet IDs."
-  value       = concat(aws_subnet.gwlb_endpoint_a.*.id, aws_subnet.gwlb_endpoint_b.*.id)
+output "gwlb_endpoint_subnet_ids_by_az" {
+  description = "A map of GWLB endpoint subnet IDs, keyed by AZ."
+  value = {
+    for s in concat(aws_subnet.gwlb_endpoint_a, aws_subnet.gwlb_endpoint_b) : s.availability_zone => s.id
+  }
 }
 
 output "internet_gateway_id" {
