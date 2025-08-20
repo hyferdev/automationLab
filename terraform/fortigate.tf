@@ -34,4 +34,3 @@ resource "aws_lb_target_group_attachment" "fortigate_attachment" {
   target_group_arn = aws_lb_target_group.fortigate_tg.arn
   target_id        = each.value.id
 }
-
