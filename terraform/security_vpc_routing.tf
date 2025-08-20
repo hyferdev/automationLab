@@ -35,25 +35,6 @@ resource "aws_route_table_association" "private_tgw" {
   route_table_id = aws_route_table.private_rt_tgw_attachment[each.key].id
 }
 
-# Associated with the IGW. Intercepts traffic from the internet to spokes and sends it to the GWLB.
-resource "aws_route_table" "edge_rt" {
-  vpc_id = module.vpc["security"].vpc_id
-  tags   = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-security-edge-rt" })
-}
-
-resource "aws_route" "ingress_to_gwlb" {
-  # Create a route for each SPOKE VPC's CIDR. This is the only valid target from an IGW to an endpoint.
-  for_each = { for k, v in var.vpcs : k => v.vpc_cidr if k != "security" }
-  route_table_id         = aws_route_table.edge_rt.id
-  destination_cidr_block = each.value
-  vpc_endpoint_id        = values(aws_vpc_endpoint.gwlb_endpoints)[0].id
-}
-
-resource "aws_route_table_association" "igw_to_edge" {
-  gateway_id     = module.vpc["security"].internet_gateway_id
-  route_table_id = aws_route_table.edge_rt.id
-}
-
 # Handles traffic AFTER inspection by the FortiGates.
 resource "aws_route_table" "gwlb_endpoint_rt" {
   for_each = toset(var.availability_zones)
