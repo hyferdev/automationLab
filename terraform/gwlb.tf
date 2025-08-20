@@ -66,7 +66,7 @@ resource "aws_vpc_endpoint" "gwlb_endpoints" {
   service_name        = aws_vpc_endpoint_service.gwlb_service.service_name
   vpc_endpoint_type   = "GatewayLoadBalancer"
   subnet_ids = [
-    module.vpc["security"].gwlb_endpoint_subnet_ids[index(var.availability_zones, each.key)]
+    module.vpc["security"].gwlb_endpoint_subnet_ids_by_az[each.key]
   ]
 
   tags = merge(var.standard_tags, var.project_tags, {

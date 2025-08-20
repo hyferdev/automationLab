@@ -1,6 +1,19 @@
 # /terraform/security_vpc_routing.tf
 # This file contains the corrected routing logic for the security VPC.
 
+locals {
+  # Create a map of all routes needed from the GWLB endpoints back to the TGW.
+  # The key is a unique string like "us-east-1a-des", and the value is an object
+  # containing the AZ and the destination CIDR.
+  gwlb_to_tgw_routes = {
+    for tuple in setproduct(var.availability_zones, keys(var.vpcs)) :
+    "${tuple[0]}-${tuple[1]}" => {
+      az       = tuple[0]
+      vpc_cidr = var.vpcs[tuple[1]].vpc_cidr
+    } if tuple[1] != "security"
+  }
+}
+
 # --- ROUTING FOR SECURITY VPC ---
 # All traffic entering from the TGW is sent to the GWLB endpoints.
 resource "aws_route_table" "private_rt_tgw_attachment" {
@@ -50,15 +63,7 @@ resource "aws_route_table" "gwlb_endpoint_rt" {
 
 # Route inspected traffic for spokes back to the TGW.
 resource "aws_route" "gwlb_to_tgw" {
-  for_each = {
-    for az in var.availability_zones :
-    for vpc_key, vpc_details in var.vpcs :
-    "${az}-${vpc_key}" => {
-      az         = az
-      vpc_cidr   = vpc_details.vpc_cidr
-      is_security = vpc_key == "security"
-    } if !is_security
-  }
+  for_each = local.gwlb_to_tgw_routes
   route_table_id         = aws_route_table.gwlb_endpoint_rt[each.value.az].id
   destination_cidr_block = each.value.vpc_cidr
   transit_gateway_id     = module.tgw.transit_gateway_id
