@@ -91,6 +91,34 @@ resource "aws_subnet" "gwlb_endpoint_b" {
 }
 
 # --- ROUTING ---
+# Spoke VPC Routing
+resource "aws_route_table" "public_rt_spoke" {
+  count  = var.appliance_subnet_a_cidr == null ? 1 : 0
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main_gw.id
+  }
+
+  tags = merge(var.standard_tags, var.project_tags, {
+    Name = "${var.project_name}-${var.environment}-public-rt"
+  })
+}
+
+resource "aws_route_table_association" "public_a_spoke" {
+  count          = var.appliance_subnet_a_cidr == null ? 1 : 0
+  subnet_id      = aws_subnet.public_a.id
+  route_table_id = aws_route_table.public_rt_spoke[0].id
+}
+
+resource "aws_route_table_association" "public_b_spoke" {
+  count          = var.appliance_subnet_a_cidr == null ? 1 : 0
+  subnet_id      = aws_subnet.public_b.id
+  route_table_id = aws_route_table.public_rt_spoke[0].id
+}
+
+# Security Appliance Routing
 resource "aws_route_table" "appliance_rt" {
   count  = var.appliance_subnet_a_cidr != null ? 1 : 0
   vpc_id = aws_vpc.main.id
