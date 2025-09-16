@@ -48,7 +48,7 @@ resource "aws_route" "gwlb_to_tgw" {
   route_table_id         = aws_route_table.gwlb_endpoint_rt[each.value.az].id
   destination_cidr_block = each.value.vpc_cidr
   transit_gateway_id     = module.tgw.transit_gateway_id
-  depends_on = [module.tgw] #
+  depends_on = [module.tgw] #This block will run before TGW is created if this is removed
 }
 
 # Route inspected internet-bound traffic to the IGW.

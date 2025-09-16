@@ -169,6 +169,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
   subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
   transit_gateway_id = var.transit_gateway_id
   vpc_id             = aws_vpc.main.id
+  appliance_mode_support = var.appliance_subnet_a_cidr != null ? "enable" : "disable"
   tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-tgw-attachment" })
 }
 

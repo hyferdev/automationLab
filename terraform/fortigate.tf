@@ -65,7 +65,7 @@ resource "aws_instance" "fortigate" {
   key_name      = var.ssh_key_name
   subnet_id     = module.vpc["security"].appliance_subnet_ids[index(var.availability_zones, each.key)]
   vpc_security_group_ids = [aws_security_group.fortigate_management_sg.id]  
-
+  
   # Disable source/destination check is critical for firewall appliances
   source_dest_check = false
 
