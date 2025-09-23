@@ -18,10 +18,10 @@ resource "aws_security_group" "fortigate_management_sg" {
 
   ingress {
     description = "Allow HTTPS from management CIDR"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [var.management_cidr]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
