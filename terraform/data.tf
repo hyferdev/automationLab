@@ -3,13 +3,11 @@
 
 data "aws_ami" "paloalto" {
   most_recent = true
-  owners      = ["679593333241"] # This is the official AWS Account ID for Palo Alto Networks
+  owners      = ["679593333241"] # Official AWS Account ID for Palo Alto Networks
 
   filter {
-    name   = "name"
-    # This filter targets the VM-Series, Bundle 2, PAYG model.
-    # The version numbers are wildcarded to grab the latest.
-    values = ["PA-VM-AWS-11.1.*-b2-payg-*"]
+    name = "name"
+    values = ["PA-VM-AWS-11.1.*"]
   }
 
   filter {
@@ -18,9 +16,7 @@ data "aws_ami" "paloalto" {
   }
 
   filter {
-    name   = "product-code"
-    # This is the specific product code for "VM-Series Next-Generation Firewall Bundle 2"
-    # You can find this on the AWS Marketplace page for the product.
-    values = ["6kxdw3bbmdeda5ws5i69op56b"]
+    name = "product-code"
+    values = ["f1260463-68e1-4bfb-bf2e-075c2664c1d7"]
   }
 }
