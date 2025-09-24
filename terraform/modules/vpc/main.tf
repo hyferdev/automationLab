@@ -1,5 +1,5 @@
 # /terraform/modules/vpc/main.tf
-# This file contains the core logic of the VPC module, including GWLB routing.
+# This file contains the core logic of the VPC module.
 
 # --- VPC Definition ---
 resource "aws_vpc" "main" {
@@ -12,65 +12,79 @@ resource "aws_vpc" "main" {
   })
 }
 
-# --- Local values for mapping resources to AZs ---
-locals {
-  private_subnets_by_az = {
-    "${var.availability_zones[0]}" = aws_subnet.private_a.id,
-    "${var.availability_zones[1]}" = aws_subnet.private_b.id
-  }
+# --- Gateways ---
+# An Internet Gateway is required for both public spoke subnets and the security VPC subnets.
+resource "aws_internet_gateway" "main_gw" {
+  vpc_id = aws_vpc.main.id
+  tags   = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-igw" })
 }
 
 # --- Standard Subnets ---
 resource "aws_subnet" "public_a" {
+  count = var.public_subnet_a_cidr != null ? 1 : 0
+
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_a_cidr
   availability_zone       = var.availability_zones[0]
   map_public_ip_on_launch = true
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-public-subnet-a" })
+  tags                    = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-public-subnet-a" })
 }
 
 resource "aws_subnet" "public_b" {
+  count = var.public_subnet_b_cidr != null ? 1 : 0
+
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_b_cidr
   availability_zone       = var.availability_zones[1]
   map_public_ip_on_launch = true
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-public-subnet-b" })
+  tags                    = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-public-subnet-b" })
 }
 
 resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_a_cidr
   availability_zone = var.availability_zones[0]
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-private-subnet-a" })
+  tags              = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-private-subnet-a" })
 }
 
 resource "aws_subnet" "private_b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_b_cidr
   availability_zone = var.availability_zones[1]
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-private-subnet-b" })
+  tags              = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-private-subnet-b" })
 }
 
-# --- Gateways ---
-resource "aws_internet_gateway" "main_gw" {
-  vpc_id = aws_vpc.main.id
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-igw" })
-}
-
-# --- Appliance Subnets (for FortiGates) ---
-resource "aws_subnet" "appliance_a" {
-  count = var.appliance_subnet_a_cidr != null ? 1 : 0
+# --- Palo Alto Subnets ---
+resource "aws_subnet" "management_a" {
+  count = var.management_subnet_a_cidr != null ? 1 : 0
   vpc_id            = aws_vpc.main.id
-  cidr_block        = var.appliance_subnet_a_cidr
+  cidr_block        = var.management_subnet_a_cidr
   availability_zone = var.availability_zones[0]
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-appliance-subnet-a" })
+  tags              = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-management-subnet-a" })
 }
-resource "aws_subnet" "appliance_b" {
-  count = var.appliance_subnet_b_cidr != null ? 1 : 0
+
+resource "aws_subnet" "management_b" {
+  count = var.management_subnet_b_cidr != null ? 1 : 0
   vpc_id            = aws_vpc.main.id
-  cidr_block        = var.appliance_subnet_b_cidr
+  cidr_block        = var.management_subnet_b_cidr
   availability_zone = var.availability_zones[1]
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-appliance-subnet-b" })
+  tags              = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-management-subnet-b" })
+}
+
+resource "aws_subnet" "egress_a" {
+  count = var.egress_subnet_a_cidr != null ? 1 : 0
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.egress_subnet_a_cidr
+  availability_zone = var.availability_zones[0]
+  tags              = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-egress-subnet-a" })
+}
+
+resource "aws_subnet" "egress_b" {
+  count = var.egress_subnet_b_cidr != null ? 1 : 0
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.egress_subnet_b_cidr
+  availability_zone = var.availability_zones[1]
+  tags              = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-egress-subnet-b" })
 }
 
 # --- GWLB Endpoint Subnets ---
@@ -93,7 +107,7 @@ resource "aws_subnet" "gwlb_endpoint_b" {
 # --- ROUTING ---
 # Spoke VPC Routing
 resource "aws_route_table" "public_rt_spoke" {
-  count  = var.appliance_subnet_a_cidr == null ? 1 : 0
+  count  = var.management_subnet_a_cidr == null ? 1 : 0
   vpc_id = aws_vpc.main.id
 
   route {
@@ -107,59 +121,84 @@ resource "aws_route_table" "public_rt_spoke" {
 }
 
 resource "aws_route_table_association" "public_a_spoke" {
-  count          = var.appliance_subnet_a_cidr == null ? 1 : 0
-  subnet_id      = aws_subnet.public_a.id
+  count          = var.management_subnet_a_cidr == null && var.public_subnet_a_cidr != null ? 1 : 0
+  subnet_id      = aws_subnet.public_a[0].id
   route_table_id = aws_route_table.public_rt_spoke[0].id
 }
 
 resource "aws_route_table_association" "public_b_spoke" {
-  count          = var.appliance_subnet_a_cidr == null ? 1 : 0
-  subnet_id      = aws_subnet.public_b.id
+  count          = var.management_subnet_a_cidr == null && var.public_subnet_b_cidr != null ? 1 : 0
+  subnet_id      = aws_subnet.public_b[0].id
   route_table_id = aws_route_table.public_rt_spoke[0].id
 }
 
-# Security Appliance Routing
-resource "aws_route_table" "appliance_rt" {
-  count  = var.appliance_subnet_a_cidr != null ? 1 : 0
+# Security VPC Routing
+resource "aws_route_table" "management_rt" {
+  count  = var.management_subnet_a_cidr != null ? 1 : 0
   vpc_id = aws_vpc.main.id
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main_gw.id
   }
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-appliance-rt" })
+  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-management-rt" })
 }
 
-resource "aws_route_table_association" "appliance_a" {
-  count          = var.appliance_subnet_a_cidr != null ? 1 : 0
-  subnet_id      = aws_subnet.appliance_a[0].id
-  route_table_id = aws_route_table.appliance_rt[0].id
+resource "aws_route_table_association" "management_a" {
+  count          = var.management_subnet_a_cidr != null ? 1 : 0
+  subnet_id      = aws_subnet.management_a[0].id
+  route_table_id = aws_route_table.management_rt[0].id
 }
 
-resource "aws_route_table_association" "appliance_b" {
-  count          = var.appliance_subnet_b_cidr != null ? 1 : 0
-  subnet_id      = aws_subnet.appliance_b[0].id
-  route_table_id = aws_route_table.appliance_rt[0].id
+resource "aws_route_table_association" "management_b" {
+  count          = var.management_subnet_b_cidr != null ? 1 : 0
+  subnet_id      = aws_subnet.management_b[0].id
+  route_table_id = aws_route_table.management_rt[0].id
 }
 
-resource "aws_route_table" "private_rt_spoke" {
-  # Only create this for spoke VPCs (i.e., those without appliance subnets)
-  count  = var.appliance_subnet_a_cidr == null ? 1 : 0
+resource "aws_route_table" "egress_rt" {
+  count  = var.egress_subnet_a_cidr != null ? 1 : 0
   vpc_id = aws_vpc.main.id
   route {
-    cidr_block         = "0.0.0.0/0"
-    transit_gateway_id = var.transit_gateway_id
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main_gw.id
   }
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-private-rt" })
+  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-egress-rt" })
+}
+
+resource "aws_route_table_association" "egress_a" {
+  count          = var.egress_subnet_a_cidr != null ? 1 : 0
+  subnet_id      = aws_subnet.egress_a[0].id
+  route_table_id = aws_route_table.egress_rt[0].id
+}
+
+resource "aws_route_table_association" "egress_b" {
+  count          = var.egress_subnet_b_cidr != null ? 1 : 0
+  subnet_id      = aws_subnet.egress_b[0].id
+  route_table_id = aws_route_table.egress_rt[0].id
+}
+
+# Private Spoke VPC Routing
+resource "aws_route_table" "private_rt_spoke" {
+  count  = var.management_subnet_a_cidr == null ? 1 : 0
+  vpc_id = aws_vpc.main.id
+  tags   = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-private-rt" })
+}
+
+resource "aws_route" "private_rt_spoke_default" {
+  count                  = var.management_subnet_a_cidr == null ? 1 : 0
+  route_table_id         = aws_route_table.private_rt_spoke[0].id
+  destination_cidr_block = "0.0.0.0/0"
+  transit_gateway_id     = var.transit_gateway_id
 }
 
 resource "aws_route_table_association" "private_a_spoke" {
-  count          = var.appliance_subnet_a_cidr == null ? 1 : 0
+  count          = var.management_subnet_a_cidr == null ? 1 : 0
   subnet_id      = aws_subnet.private_a.id
   route_table_id = aws_route_table.private_rt_spoke[0].id
 }
 
 resource "aws_route_table_association" "private_b_spoke" {
-  count          = var.appliance_subnet_a_cidr == null ? 1 : 0
+  count          = var.management_subnet_a_cidr == null ? 1 : 0
   subnet_id      = aws_subnet.private_b.id
   route_table_id = aws_route_table.private_rt_spoke[0].id
 }
@@ -169,8 +208,8 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
   subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
   transit_gateway_id = var.transit_gateway_id
   vpc_id             = aws_vpc.main.id
-  appliance_mode_support = var.appliance_subnet_a_cidr != null ? "enable" : "disable"
-  tags = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-tgw-attachment" })
+  appliance_mode_support = var.management_subnet_a_cidr != null ? "enable" : "disable"
+  tags                   = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-tgw-attachment" })
 }
 
 # --- VPC Flow Logs ---
@@ -188,8 +227,8 @@ resource "aws_iam_role" "flow_logs_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
+        Action    = "sts:AssumeRole"
+        Effect    = "Allow"
         Principal = {
           Service = "vpc-flow-logs.amazonaws.com"
         }

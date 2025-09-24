@@ -9,11 +9,13 @@ variable "vpc_cidr" {
 variable "public_subnet_a_cidr" {
   description = "CIDR block for the public subnet in AZ a."
   type        = string
+  default     = null
 }
 
 variable "public_subnet_b_cidr" {
   description = "CIDR block for the public subnet in AZ b."
   type        = string
+  default     = null
 }
 
 variable "private_subnet_a_cidr" {
@@ -25,6 +27,43 @@ variable "private_subnet_b_cidr" {
   description = "CIDR block for the private subnet in AZ b."
   type        = string
 }
+
+variable "management_subnet_a_cidr" {
+  description = "CIDR for the Palo Alto management subnet in AZ a."
+  type        = string
+  default     = null
+}
+
+variable "management_subnet_b_cidr" {
+  description = "CIDR for the Palo Alto management subnet in AZ b."
+  type        = string
+  default     = null
+}
+
+variable "egress_subnet_a_cidr" {
+  description = "CIDR for the Palo Alto egress subnet in AZ a."
+  type        = string
+  default     = null
+}
+
+variable "egress_subnet_b_cidr" {
+  description = "CIDR for the Palo Alto egress subnet in AZ b."
+  type        = string
+  default     = null
+}
+
+variable "gwlb_endpoint_subnet_a_cidr" {
+  description = "CIDR block for the GWLB endpoint subnet in AZ a."
+  type        = string
+  default     = null
+}
+
+variable "gwlb_endpoint_subnet_b_cidr" {
+  description = "CIDR block for the GWLB endpoint subnet in AZ b."
+  type        = string
+  default     = null
+}
+
 
 variable "project_name" {
   description = "The name of the project, used for tagging."
@@ -56,46 +95,4 @@ variable "environment" {
 variable "transit_gateway_id" {
   description = "The ID of the Transit Gateway to attach to."
   type        = string
-}
-
-variable "all_vpc_cidrs" {
-  description = "A map of all VPC CIDR blocks in the environment, used for routing. The key is the logical VPC name, value is the CIDR."
-  type        = map(string)
-  default     = {}
-}
-
-variable "fortigate_subnet_a_cidr" {
-  description = "CIDR block for the FortiGate subnet in AZ a."
-  type        = string
-  default     = null
-}
-
-variable "appliance_subnet_a_cidr" {
-  description = "CIDR for the appliance subnet in AZ a."
-  type        = string
-  default     = null
-}
-
-variable "appliance_subnet_b_cidr" {
-  description = "CIDR for the appliance subnet in AZ b."
-  type        = string
-  default     = null
-}
-
-variable "gwlb_endpoint_subnet_a_cidr" {
-  description = "CIDR for the GWLB endpoint subnet in AZ a."
-  type        = string
-  default     = null
-}
-
-variable "gwlb_endpoint_subnet_b_cidr" {
-  description = "CIDR for the GWLB endpoint subnet in AZ b."
-  type        = string
-  default     = null
-}
-
-variable "gwlb_endpoint_ids" {
-  description = "List of GWLB VPC Endpoint IDs."
-  type        = list(string)
-  default     = null
 }

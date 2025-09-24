@@ -8,7 +8,7 @@ output "vpc_id" {
 
 output "public_subnet_ids" {
   description = "A list of the public subnet IDs."
-  value       = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+  value       = concat(aws_subnet.public_a.*.id, aws_subnet.public_b.*.id)
 }
 
 output "private_subnet_ids" {
@@ -16,32 +16,48 @@ output "private_subnet_ids" {
   value       = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 }
 
-output "private_subnet_ids_by_az" {
-  description = "A map of private subnet IDs, keyed by AZ."
-  value = {
-    "${var.availability_zones[0]}" = aws_subnet.private_a.id,
-    "${var.availability_zones[1]}" = aws_subnet.private_b.id
-  }
+output "transit_gateway_attachment_id" {
+  description = "The ID of the Transit Gateway VPC attachment."
+  value       = aws_ec2_transit_gateway_vpc_attachment.main.id
 }
 
-output "appliance_subnet_ids" {
-  description = "A list of the appliance subnet IDs."
-  value       = concat(aws_subnet.appliance_a.*.id, aws_subnet.appliance_b.*.id)
-}
-
-output "gwlb_endpoint_subnet_ids_by_az" {
-  description = "A map of GWLB endpoint subnet IDs, keyed by AZ."
-  value = {
-    for s in concat(aws_subnet.gwlb_endpoint_a, aws_subnet.gwlb_endpoint_b) : s.availability_zone => s.id
-  }
-}
-
+# --- Output for Internet Gateway ---
 output "internet_gateway_id" {
   description = "The ID of the Internet Gateway."
   value       = aws_internet_gateway.main_gw.id
 }
 
-output "transit_gateway_attachment_id" {
-  description = "The ID of the Transit Gateway VPC attachment."
-  value       = aws_ec2_transit_gateway_vpc_attachment.main.id
+
+# --- Outputs for Palo Alto Multi-Interface Design ---
+output "management_subnet_ids_by_az" {
+  description = "A map of management subnet IDs, keyed by Availability Zone."
+  value = merge(
+    { for s in aws_subnet.management_a : s.availability_zone => s.id },
+    { for s in aws_subnet.management_b : s.availability_zone => s.id }
+  )
 }
+
+output "egress_subnet_ids_by_az" {
+  description = "A map of egress subnet IDs, keyed by Availability Zone."
+  value = merge(
+    { for s in aws_subnet.egress_a : s.availability_zone => s.id },
+    { for s in aws_subnet.egress_b : s.availability_zone => s.id }
+  )
+}
+
+output "private_subnet_ids_by_az" {
+  description = "A map of private subnet IDs (used for TGW/GENEVE), keyed by AZ."
+  value = {
+    (aws_subnet.private_a.availability_zone) = aws_subnet.private_a.id,
+    (aws_subnet.private_b.availability_zone) = aws_subnet.private_b.id
+  }
+}
+
+output "gwlb_endpoint_subnet_ids_by_az" {
+  description = "A map of GWLB endpoint subnet IDs, keyed by Availability Zone."
+  value = merge(
+    { for s in aws_subnet.gwlb_endpoint_a : s.availability_zone => s.id },
+    { for s in aws_subnet.gwlb_endpoint_b : s.availability_zone => s.id }
+  )
+}
+

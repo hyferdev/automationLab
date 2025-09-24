@@ -67,3 +67,14 @@ variable "ssh_key_name" {
   type        = string
 }
 
+variable "paloalto_ami_id" {
+  description = "The AWS Marketplace AMI ID for the Palo Alto Networks VM-Series firewall. If not specified, the latest will be used."
+  type        = string
+  default     = null # The default is now null
+}
+
+variable "paloalto_instance_type" {
+  description = "The EC2 instance type for the Palo Alto firewalls."
+  type        = string
+  default     = "m5.xlarge"
+}
