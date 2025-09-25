@@ -47,19 +47,12 @@ variable "vpcs" {
     egress_subnet_b_cidr          = optional(string, null)
   }))
   default = {
-    primary = {
+    des = {
       vpc_cidr                = "10.100.0.0/16"
       public_subnet_a_cidr    = "10.100.10.0/24"
       public_subnet_b_cidr    = "10.100.20.0/24"
       private_subnet_a_cidr   = "10.100.30.0/24"
       private_subnet_b_cidr   = "10.100.40.0/24"
-    },
-    secondary = {
-      vpc_cidr                = "10.250.0.0/16"
-      public_subnet_a_cidr    = "10.250.10.0/24"
-      public_subnet_b_cidr    = "10.250.20.0/24"
-      private_subnet_a_cidr   = "10.250.30.0/24"
-      private_subnet_b_cidr   = "10.250.40.0/24"
     },
     natasha = {
       vpc_cidr                = "10.15.0.0/16"

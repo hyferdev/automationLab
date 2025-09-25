@@ -1,17 +1,15 @@
 # /terraform/data.tf
 # This file contains data sources to look up dynamic information.
 
-data "aws_ami" "paloalto" {
-  most_recent = true
-  owners      = ["679593333241"] # Official AWS Account ID for Palo Alto Networks
+data "aws_ssm_parameters_by_path" "paloalto_amis" {
+  path = "/aws/service/marketplace/prod-hhtxhxwx3jg6k/"
+}
 
-  filter {
-    name = "name"
-    values = ["PA-VM-AWS-11.1.*"]
-  }
+locals {
+    sorted_ami_parameters = sort(data.aws_ssm_parameters_by_path.paloalto_amis.names)
+    latest_ami_parameter = local.sorted_ami_parameters[length(local.sorted_ami_parameters) - 1]
+}
 
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
+data "aws_ssm_parameter" "paloalto" {
+  name = local.latest_ami_parameter
 }

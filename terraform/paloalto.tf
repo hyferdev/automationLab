@@ -69,8 +69,7 @@ resource "aws_network_interface" "paloalto_interfaces_tgw" {
 resource "aws_instance" "paloalto" {
   for_each = toset(var.availability_zones)
 
-  ami               = var.paloalto_ami_id == null ? data.aws_ami.paloalto.id : var.paloalto_ami_id
-
+  ami               = data.aws_ssm_parameter.paloalto.value
   instance_type     = var.paloalto_instance_type
   availability_zone = each.key
   iam_instance_profile = aws_iam_instance_profile.paloalto_bootstrap_profile.name

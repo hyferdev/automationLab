@@ -2,7 +2,7 @@
 # Creates the S3 bucket and objects for Palo Alto bootstrapping.
 
 resource "aws_s3_bucket" "bootstrap_bucket" {
-  bucket = "${var.project_name}-${var.environment}-pa-bootstrap"
+  bucket = lower("${var.project_name}-${var.environment}-pa-bootstrap")
 
   tags = merge(var.standard_tags, var.project_tags, {
     Name = "${var.project_name}-${var.environment}-pa-bootstrap-bucket"
