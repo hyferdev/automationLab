@@ -14,9 +14,4 @@ data "aws_ami" "paloalto" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
-
-  filter {
-    name = "product-code"
-    values = ["f1260463-68e1-4bfb-bf2e-075c2664c1d7"]
-  }
 }
