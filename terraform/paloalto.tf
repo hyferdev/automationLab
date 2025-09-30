@@ -33,6 +33,50 @@ resource "aws_iam_instance_profile" "paloalto_bootstrap_profile" {
   role = aws_iam_role.paloalto_bootstrap_role.name
 }
 
+# --- Security Group for Management Access ---
+resource "aws_security_group" "paloalto_mgmt_sg" {
+  name        = "${var.project_name}-${var.environment}-paloalto-mgmt-sg"
+  description = "Allow management access (SSH/HTTPS) to Palo Alto firewalls"
+  vpc_id      = module.vpc["security"].vpc_id
+
+  ingress {
+    description = "Allow HTTPS from management CIDR"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.management_cidr]
+  }
+
+  ingress {
+    description = "Allow SSH from management CIDR"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.management_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.standard_tags, var.project_tags, {
+    Name = "${var.project_name}-${var.environment}-paloalto-mgmt-sg"
+  })
+}
+
+# --- Elastic IPs for Management Interfaces ---
+resource "aws_eip" "paloalto_mgmt_eip" {
+  for_each = toset(var.availability_zones)
+  domain   = "vpc"
+
+  tags = merge(var.standard_tags, var.project_tags, {
+    Name = "${var.project_name}-${var.environment}-pa-mgmt-eip-${each.key}"
+  })
+}
+
 # --- Network Interfaces for the Firewalls ---
 resource "aws_network_interface" "paloalto_interfaces" {
   for_each = toset(var.availability_zones)
@@ -63,7 +107,6 @@ resource "aws_network_interface" "paloalto_interfaces_tgw" {
   tags              = { Name = "${var.project_name}-${var.environment}-pa-tgw-${each.key}" }
 
 }
-
 
 # --- Palo Alto VM-Series Instances ---
 resource "aws_instance" "paloalto" {

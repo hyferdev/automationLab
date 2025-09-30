@@ -60,6 +60,7 @@ resource "aws_subnet" "management_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.management_subnet_a_cidr
   availability_zone = var.availability_zones[0]
+  map_public_ip_on_launch = true
   tags              = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-management-subnet-a" })
 }
 
@@ -68,6 +69,7 @@ resource "aws_subnet" "management_b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.management_subnet_b_cidr
   availability_zone = var.availability_zones[1]
+  map_public_ip_on_launch = true
   tags              = merge(var.standard_tags, var.project_tags, { Name = "${var.project_name}-${var.environment}-management-subnet-b" })
 }
 
@@ -216,6 +218,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
 # The following resources enable VPC Flow Logs to be sent to CloudWatch for debugging.
 resource "aws_cloudwatch_log_group" "flow_logs" {
   name = "/aws/vpc-flow-logs/${var.project_name}-${var.environment}"
+  retention_in_days = 1
   tags = merge(var.standard_tags, var.project_tags, {
     Name = "${var.project_name}-${var.environment}-flow-logs"
   })
