@@ -138,13 +138,13 @@ resource "aws_instance" "paloalto" {
     network_interface_id = aws_network_interface.paloalto_interfaces_tgw[each.key].id
     device_index         = 2
   }
-
+/*
   # User data triggers the bootstrap process.
   user_data = <<-EOT
     plugin-op-commands=aws-vmseries-bootstrap-get-config:
     mgmt-interface-swap=enable
   EOT
-
+*/
   tags = merge(var.standard_tags, var.project_tags, {
     Name = "${var.project_name}-${var.environment}-paloalto-${each.key}"
   })
