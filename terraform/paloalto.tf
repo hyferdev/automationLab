@@ -83,8 +83,15 @@ resource "aws_network_interface" "paloalto_interfaces" {
 
   # Interface 0: Management
   # Attached to the management subnet.
-  subnet_id = module.vpc["security"].management_subnet_ids_by_az[each.key]
-  tags      = { Name = "${var.project_name}-${var.environment}-pa-mgmt-${each.key}" }
+  subnet_id       = module.vpc["security"].management_subnet_ids_by_az[each.key]
+  security_groups = [aws_security_group.paloalto_mgmt_sg.id]
+  tags            = { Name = "${var.project_name}-${var.environment}-pa-mgmt-${each.key}" }
+}
+
+resource "aws_eip_association" "paloalto_mgmt_eip_assoc" {
+  for_each             = toset(var.availability_zones)
+  network_interface_id = aws_network_interface.paloalto_interfaces[each.key].id
+  allocation_id        = aws_eip.paloalto_mgmt_eip[each.key].id
 }
 
 resource "aws_network_interface" "paloalto_interfaces_egress" {
