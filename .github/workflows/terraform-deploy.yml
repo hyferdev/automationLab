@@ -136,7 +136,7 @@ jobs:
     if: github.event_name != 'pull_request'
     environment: 
       name: 'PAN-OS Configuration Approval'
-      url: 'https://app.terraform.io/app/${{ secrets.TF_CLOUD_ORGANIZATION }}/workspaces/${{ env.TF_WORKSPACE }}/variables'
+      url: 'https://app.terraform.io/app/${{ secrets.TF_CLOUD_ORGANIZATION }}/workspaces/${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}/variables'
     steps:
       - name: 'Manual Approval Gate'
         run: echo "Waiting for manual approval. Please log in to the firewall, get the API key, and add it to the panos_api_key variable in Terraform Cloud before approving."
