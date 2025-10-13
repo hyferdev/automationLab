@@ -19,15 +19,18 @@ on:
       - 'terraform/**'
   workflow_dispatch: # Allows for manual runs from a specific branch
 
-permissions:
-  id-token: write
-  contents: read
-  pull-requests: write
-
 env:
   TF_LOG: INFO
   AWS_REGION: 'us-east-1'
   TF_WORKING_DIR: 'terraform'
+  TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
+  # Determine workspace based on the branch name for all events
+  TF_WORKSPACE: ${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
 
 jobs:
   # STEP 1: Plan the core AWS infrastructure
@@ -36,10 +39,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tf_environment: ${{ steps.get_env.outputs.ENVIRONMENT_NAME }}
-    
-    env:
-      TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
-      TF_WORKSPACE: ${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}
 
     steps:
       - name: Checkout Repository
@@ -52,7 +51,7 @@ jobs:
             echo "ENVIRONMENT_NAME=prod" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref_name }}" == "dev" ]; then
             echo "ENVIRONMENT_NAME=dev" >> $GITHUB_OUTPUT
-          else
+          elif [ "${{ github.ref_name }}" == "sandbox" ]; then
             echo "ENVIRONMENT_NAME=sandbox" >> $GITHUB_OUTPUT
           fi
 
@@ -94,12 +93,9 @@ jobs:
     name: '2 - Apply AWS Infrastructure'
     runs-on: ubuntu-latest
     needs: plan_infrastructure
+    # This job will not run on pull requests
     if: github.event_name != 'pull_request'
     environment: ${{ needs.plan_infrastructure.outputs.tf_environment }}
-
-    env:
-      TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
-      TF_WORKSPACE: ${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}
 
     steps:
       - name: Checkout Repository
@@ -136,25 +132,24 @@ jobs:
     name: 'Approve PAN-OS Configuration'
     runs-on: ubuntu-latest
     needs: apply_infrastructure
+    # This job will not run on pull requests
     if: github.event_name != 'pull_request'
     environment: 
       name: 'PAN-OS Configuration Approval'
-      url: https://app.terraform.io/app/${{ secrets.TF_CLOUD_ORGANIZATION }}/workspaces/${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}/variables
     steps:
       - name: 'Manual Approval Gate'
-        run: echo "Waiting for manual approval. Please log in to the firewall, get the API key, and add it to the panos_api_key variable in Terraform Cloud before approving."
-
+        run: |
+          echo "Please visit:"
+          echo "https://app.terraform.io/app/${{ secrets.TF_CLOUD_ORGANIZATION }}/workspaces/${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}/variables"
+          echo "Add the panos_api_key variable, then approve this workflow."
   # STEP 3: Configure the Palo Alto firewalls via API
   apply_panos_configuration:
     name: '3 - Apply PAN-OS Configuration'
     runs-on: ubuntu-latest
     needs: approve_panos_configuration
+    # This job will not run on pull requests
     if: github.event_name != 'pull_request'
     environment: ${{ needs.plan_infrastructure.outputs.tf_environment }}
-
-    env:
-      TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
-      TF_WORKSPACE: ${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}
 
     steps:
       - name: Checkout Repository
