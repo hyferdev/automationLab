@@ -119,11 +119,11 @@ resource "aws_network_interface" "paloalto_interfaces_tgw" {
 resource "aws_instance" "paloalto" {
   for_each = toset(var.availability_zones)
 
-  ami               = data.aws_ami.paloalto.id
-  instance_type     = var.paloalto_instance_type
-  availability_zone = each.key
+  ami                  = data.aws_ami.paloalto.id
+  instance_type        = var.paloalto_instance_type
+  availability_zone    = each.key
   iam_instance_profile = aws_iam_instance_profile.paloalto_bootstrap_profile.name
-  key_name          = var.ssh_key_name
+  key_name             = var.ssh_key_name
 
   # Attach the interfaces in the correct order.
   network_interface {
@@ -138,13 +138,12 @@ resource "aws_instance" "paloalto" {
     network_interface_id = aws_network_interface.paloalto_interfaces_tgw[each.key].id
     device_index         = 2
   }
-/*
-  # User data triggers the bootstrap process.
-  user_data = <<-EOT
-    plugin-op-commands=aws-vmseries-bootstrap-get-config:
-    mgmt-interface-swap=enable
-  EOT
-*/
+
+  # Use user_data to set the initial admin password
+  user_data = templatefile("${path.module}/set-password.tpl", {
+    initial_password = var.panos_initial_admin_password
+  })
+
   tags = merge(var.standard_tags, var.project_tags, {
     Name = "${var.project_name}-${var.environment}-paloalto-${each.key}"
   })
