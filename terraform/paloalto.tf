@@ -140,9 +140,10 @@ resource "aws_instance" "paloalto" {
   }
 
   # Use user_data to set the initial admin password
-  user_data = templatefile("${path.module}/set-password.tpl", {
-    initial_password = var.panos_initial_admin_password
-  })
+  user_data = <<-EOT
+    plugin-op-commands=aws-vmseries-bootstrap-get-config:
+    mgmt-interface-swap=enable
+  EOT
 
   tags = merge(var.standard_tags, var.project_tags, {
     Name = "${var.project_name}-${var.environment}-paloalto-${each.key}"

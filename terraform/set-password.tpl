@@ -1,1 +1,0 @@
-panos-password=${initial_password}
