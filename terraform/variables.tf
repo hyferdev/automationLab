@@ -79,7 +79,7 @@ variable "paloalto_instance_type" {
   type        = string
   default     = "m5.xlarge"
 }
-
+/*
 variable "panos_initial_admin_password" {
   description = "The initial password to set for the default 'admin' user on first boot."
   type        = string
@@ -103,3 +103,4 @@ variable "panos_admin_password" {
   type        = string
   sensitive   = true
 }
+*/
