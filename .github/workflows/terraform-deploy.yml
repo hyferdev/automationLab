@@ -127,7 +127,7 @@ jobs:
         run: terraform apply -input=false tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
 
-  # MANUAL GATE: Manually approve the firewall configuration step
+  # STEP 3: Manually approve the firewall configuration step
   approve_panos_configuration:
     name: 'Approve PAN-OS Configuration'
     runs-on: ubuntu-latest
@@ -142,9 +142,9 @@ jobs:
           echo "Please visit:"
           echo "https://app.terraform.io/app/${{ secrets.TF_CLOUD_ORGANIZATION }}/workspaces/${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}/variables"
           echo "Add the panos_api_key variable, then approve this workflow."
-  # STEP 3: Configure the Palo Alto firewalls via API
+  # STEP 4: Configure the Palo Alto firewalls via API
   apply_panos_configuration:
-    name: '3 - Apply PAN-OS Configuration'
+    name: '4 - Apply PAN-OS Configuration'
     runs-on: ubuntu-latest
     needs: approve_panos_configuration
     # This job will not run on pull requests
