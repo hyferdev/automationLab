@@ -141,9 +141,7 @@ resource "aws_instance" "paloalto" {
 
   # Use user_data to set the initial admin password
   user_data = "vmseries-bootstrap-aws-s3-bucket=${aws_s3_bucket.bootstrap_bucket.id}"
-  lifecycle {
-    user_data_replace_on_change = true
-  }
+  user_data_replace_on_change = true
 
   tags = merge(var.standard_tags, var.project_tags, {
     Name = "${var.project_name}-${var.environment}-paloalto-${each.key}"
