@@ -139,8 +139,7 @@ jobs:
     steps:
       - name: 'Manual Approval Gate'
         run: |
-          echo "Please visit:"
-          echo "https://app.terraform.io/app/${{ secrets.TF_CLOUD_ORGANIZATION }}/workspaces/${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}/variables"
+          echo "Please visit Terraform Cloud"
           echo "Add the panos_api_key variable, then approve this workflow."
   # STEP 4: Configure the Palo Alto firewalls via API
   apply_panos_configuration:

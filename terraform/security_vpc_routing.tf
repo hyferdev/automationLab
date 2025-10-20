@@ -64,4 +64,3 @@ resource "aws_route_table_association" "gwlb_endpoint_subnets" {
   subnet_id      = module.vpc["security"].gwlb_endpoint_subnet_ids_by_az[each.key]
   route_table_id = aws_route_table.gwlb_endpoint_rt[each.key].id
 }
-

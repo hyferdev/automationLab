@@ -1,7 +1,5 @@
-#################################
-# --- Transit Gateway ---
-# Call the Transit Gateway module
-#################################
+# /terraform/tgw.tf
+# Transit Gateway configuration and VPC attachments
 
 module "tgw" {
   source = "./modules/tgw"
