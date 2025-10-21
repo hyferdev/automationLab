@@ -140,14 +140,12 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Apply
-        # This step is conditional on the output of the plan job.
-        if: needs.plan_infrastructure.outputs.plan_has_changes == 'true'
         run: terraform apply -input=false tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
 
   # STEP 3: Manually approve the firewall configuration step
   approve_panos_configuration:
-    name: 'Approve PAN-OS Configuration'
+    name: '3 - Approve PAN-OS Configuration'
     runs-on: ubuntu-latest
     needs: apply_infrastructure
     # This job will be skipped if there were no infrastructure changes.
