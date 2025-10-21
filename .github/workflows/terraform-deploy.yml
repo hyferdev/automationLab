@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tf_environment: ${{ steps.get_env.outputs.ENVIRONMENT_NAME }}
+      # This output will be 'true' or 'false' and will control the apply job
       plan_has_changes: ${{ steps.check_plan.outputs.has_changes }}
 
     steps:
@@ -64,7 +65,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.3
+          terraform_version: 1.13.0
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
       - name: Terraform Init
@@ -82,7 +83,7 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         continue-on-error: true
 
-      # Checks the exit code from the plan and sets an output.
+      # This step checks the exit code from the plan and sets an output.
       - name: Check for plan changes
         id: check_plan
         run: |
@@ -125,7 +126,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.3
+          terraform_version: 1.13.0
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
       - name: Download Plan Artifact
@@ -176,7 +177,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.3
+          terraform_version: 1.13.0
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
       - name: Terraform Init
