@@ -92,6 +92,7 @@ resource "aws_eip_association" "paloalto_mgmt_eip_assoc" {
   for_each             = toset(var.availability_zones)
   network_interface_id = aws_network_interface.paloalto_interfaces[each.key].id
   allocation_id        = aws_eip.paloalto_mgmt_eip[each.key].id
+  depends_on = [aws_instance.paloalto]
 }
 
 resource "aws_network_interface" "paloalto_interfaces_egress" {
