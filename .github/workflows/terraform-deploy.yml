@@ -1,4 +1,3 @@
-# .github/workflows/terraform-deploy.yml
 # A single, multi-stage workflow to deploy AWS infrastructure and then configure PAN-OS.
 # It triggers on pushes to main/dev/sandbox, pull requests, and manual runs.
 
@@ -39,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tf_environment: ${{ steps.get_env.outputs.ENVIRONMENT_NAME }}
+      plan_has_changes: ${{ steps.check_plan.outputs.has_changes }}
 
     steps:
       - name: Checkout Repository
@@ -78,9 +78,25 @@ jobs:
 
       - name: Terraform Plan
         id: tf_plan
-        run: terraform plan -no-color -input=false -out=tfplan
+        run: terraform plan -no-color -input=false -out=tfplan -detailed-exitcode
         working-directory: ${{ env.TF_WORKING_DIR }}
         continue-on-error: true
+
+      # Checks the exit code from the plan and sets an output.
+      - name: Check for plan changes
+        id: check_plan
+        run: |
+          echo "Plan exit code: ${{ steps.tf_plan.exitcode }}"
+          if [ "${{ steps.tf_plan.exitcode }}" -eq 1 ]; then
+            echo "::error::Terraform plan failed!"
+            exit 1
+          elif [ "${{ steps.tf_plan.exitcode }}" -eq 2 ]; then
+            echo "Plan has changes, apply job will run."
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "Plan has no changes, apply job will be skipped."
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
@@ -93,8 +109,7 @@ jobs:
     name: '2 - Apply AWS Infrastructure'
     runs-on: ubuntu-latest
     needs: plan_infrastructure
-    # This job will not run on pull requests
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && needs.plan_infrastructure.outputs.plan_has_changes == 'true'
     environment: ${{ needs.plan_infrastructure.outputs.tf_environment }}
 
     steps:
@@ -112,7 +127,7 @@ jobs:
         with:
           terraform_version: 1.13.3
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-      
+
       - name: Download Plan Artifact
         uses: actions/download-artifact@v4
         with:
@@ -132,9 +147,8 @@ jobs:
     name: 'Approve PAN-OS Configuration'
     runs-on: ubuntu-latest
     needs: apply_infrastructure
-    # This job will not run on pull requests
     if: github.event_name != 'pull_request'
-    environment: 
+    environment:
       name: 'PAN-OS Configuration Approval'
     steps:
       - name: 'Manual Approval Gate'
@@ -146,7 +160,6 @@ jobs:
     name: '4 - Apply PAN-OS Configuration'
     runs-on: ubuntu-latest
     needs: approve_panos_configuration
-    # This job will not run on pull requests
     if: github.event_name != 'pull_request'
     environment: ${{ needs.plan_infrastructure.outputs.tf_environment }}
 
