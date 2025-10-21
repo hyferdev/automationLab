@@ -85,6 +85,7 @@ variable "panos_initial_admin_password" {
   type        = string
   sensitive   = true
 }
+
 /*
 variable "panos_api_key" {
   description = "The API key for the PAN-OS provider to authenticate to the firewalls."
