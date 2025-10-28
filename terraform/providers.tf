@@ -7,10 +7,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
-    panos = {
-      source = "PaloAltoNetworks/panos"
-      version = "~> 2.0.0"
-    }
   }
   cloud {
   }

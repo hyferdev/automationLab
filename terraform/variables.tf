@@ -85,23 +85,3 @@ variable "panos_initial_admin_password" {
   type        = string
   sensitive   = true
 }
-
-/*
-variable "panos_api_key" {
-  description = "The API key for the PAN-OS provider to authenticate to the firewalls."
-  type        = string
-  sensitive   = true
-}
-
-variable "panos_admin_username" {
-  description = "The username for the new firewall administrator."
-  type        = string
-  sensitive   = true
-}
-
-variable "panos_admin_password" {
-  description = "The password for the new firewall administrator."
-  type        = string
-  sensitive   = true
-}
-*/
