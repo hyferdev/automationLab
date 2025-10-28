@@ -1,0 +1,24 @@
+---
+- name: Test Connectivity to PAN-OS Firewalls (API Key Method)
+  hosts: firewalls
+  connection: local
+  gather_facts: True
+
+  collections:
+    - paloaltonetworks.panos
+
+  tasks:
+    - name: Run 'show system info' via the API
+      panos_op:
+        provider:
+          ip_address: "{{ inventory_hostname }}"
+          api_key: "{{ panos_api_key }}"
+        cmd: "show system info"
+
+      # This registers the parsed XML output
+      register: system_info_raw
+
+    - name: Display System Info (from XML)
+      debug:
+        var: system_info_raw.stdout_lines
+

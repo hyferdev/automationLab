@@ -1,0 +1,5 @@
+---
+collections:
+  # This is the official Palo Alto Networks collection for PAN-OS
+  - name: paloaltonetworks.panos
+    version: ">=2.15.0"

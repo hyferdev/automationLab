@@ -1,0 +1,5 @@
+# ansible/inventory/host_vars/fw-az-a.yml
+# Variables for firewall fw-az-a
+
+# panos_api_key: "KEY_FOR_FIREWALL_B_GOES_HERE"
+panos_api_key: "{{ lookup('env', 'PANOS_API_KEY_AZ_A') }}"
