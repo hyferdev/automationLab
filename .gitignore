@@ -6,3 +6,4 @@
 backend_override.tf
 .archive/
 .vscode/
+scripts/paloGetAPI
