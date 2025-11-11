@@ -1,0 +1,144 @@
+# A single, multi-stage workflow to deploy AWS infrastructure and then configure PAN-OS.
+# It triggers on pushes to main/dev/sandbox, pull requests, and manual runs.
+
+name: 'Terraform CI/CD'
+
+on:
+  push:
+    branches:
+      - dev      # for dev deployments
+      - main     # for prod deployments
+      - sandbox  # for friend/collaborator deployments
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+  workflow_dispatch: # Allows for manual runs from a specific branch
+
+env:
+  TF_LOG: INFO
+  AWS_REGION: 'us-east-1'
+  TF_WORKING_DIR: 'terraform'
+  TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
+  # Determine workspace based on the branch name for all events
+  TF_WORKSPACE: ${{ github.ref_name == 'main' && 'automationLab-prod' || (github.ref_name == 'dev' && 'automationLab-dev' || 'automationLab-sandbox') }}
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  # STEP 1: Plan the core AWS infrastructure
+  plan_infrastructure:
+    name: '1 - Plan AWS Infrastructure'
+    runs-on: ubuntu-latest
+    outputs:
+      tf_environment: ${{ steps.get_env.outputs.ENVIRONMENT_NAME }}
+      # This output will be 'true' or 'false' and will control the apply job
+      plan_has_changes: ${{ steps.check_plan.outputs.has_changes }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Determine Environment from branch name
+        id: get_env
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "ENVIRONMENT_NAME=prod" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" == "dev" ]; then
+            echo "ENVIRONMENT_NAME=dev" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" == "sandbox" ]; then
+            echo "ENVIRONMENT_NAME=sandbox" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/automationLab-Github
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.0
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Validate
+        run: terraform validate -no-color
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Plan
+        id: tf_plan
+        run: terraform plan -no-color -input=false -out=tfplan -detailed-exitcode
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        continue-on-error: true
+
+      # This step checks the exit code from the plan and sets an output.
+      - name: Check for plan changes
+        id: check_plan
+        run: |
+          echo "Plan exit code: ${{ steps.tf_plan.exitcode }}"
+          if [ "${{ steps.tf_plan.exitcode }}" -eq 1 ]; then
+            echo "::error::Terraform plan failed!"
+            exit 1
+          elif [ "${{ steps.tf_plan.exitcode }}" -eq 2 ]; then
+            echo "Plan has changes, apply job will run."
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "Plan has no changes, apply job will be skipped."
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ env.TF_WORKSPACE }}
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+
+  # STEP 2: Apply the core AWS infrastructure
+  apply_infrastructure:
+    name: '2 - Apply AWS Infrastructure'
+    runs-on: ubuntu-latest
+    needs: plan_infrastructure
+    if: github.event_name != 'pull_request'
+    environment: ${{ needs.plan_infrastructure.outputs.tf_environment }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/automationLab-Github
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.0
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ env.TF_WORKSPACE }}
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Apply
+        run: terraform apply -input=false tfplan
+        working-directory: ${{ env.TF_WORKING_DIR }}
