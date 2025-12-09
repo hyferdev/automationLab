@@ -6,3 +6,4 @@ type=dhcp-client
 op-command-modes=jumbo-frame
 op-command-modes=mgmt-interface-swap
 plugin-op-commands=aws-gwlb-inspect:enable
+plugin-op-commands=aws-gwlb-overlay-routing:enable
