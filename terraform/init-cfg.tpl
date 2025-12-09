@@ -4,6 +4,5 @@
 # Basic operational settings
 type=dhcp-client
 op-command-modes=jumbo-frame
-
-# Set the initial password for the 'admin' user
-admin-password=${initial_password}
+op-command-modes=mgmt-interface-swap
+plugin-op-commands=aws-gwlb-inspect:enable

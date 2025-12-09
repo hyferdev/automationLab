@@ -95,14 +95,14 @@ resource "aws_eip_association" "paloalto_mgmt_eip_assoc" {
   depends_on = [aws_instance.paloalto]
 }
 
-resource "aws_network_interface" "paloalto_interfaces_egress" {
+resource "aws_network_interface" "paloalto_interfaces_data" {
   for_each = toset(var.availability_zones)
 
   # Interface 1: Egress (to Internet)
   # Attached to the public egress subnet. Source/Dest check MUST be disabled.
   subnet_id         = module.vpc["security"].egress_subnet_ids_by_az[each.key]
   source_dest_check = false
-  tags              = { Name = "${var.project_name}-${var.environment}-pa-egress-${each.key}" }
+  tags              = { Name = "${var.project_name}-${var.environment}-pa-data-${each.key}" }
 }
 
 resource "aws_network_interface" "paloalto_interfaces_tgw" {
@@ -127,17 +127,8 @@ resource "aws_instance" "paloalto" {
   key_name             = var.ssh_key_name
 
   # Attach the interfaces in the correct order.
-  network_interface {
+  primary_network_interface {
     network_interface_id = aws_network_interface.paloalto_interfaces[each.key].id
-    device_index         = 0
-  }
-  network_interface {
-    network_interface_id = aws_network_interface.paloalto_interfaces_egress[each.key].id
-    device_index         = 1
-  }
-  network_interface {
-    network_interface_id = aws_network_interface.paloalto_interfaces_tgw[each.key].id
-    device_index         = 2
   }
 
   # Use user_data to set the initial admin password
@@ -147,4 +138,11 @@ resource "aws_instance" "paloalto" {
   tags = merge(var.standard_tags, var.project_tags, {
     Name = "${var.project_name}-${var.environment}-paloalto-${each.key}"
   })
+}
+
+resource "aws_network_interface_attachment" "paloalto_attach_data" {
+  for_each             = toset(var.availability_zones)
+  instance_id          = aws_instance.paloalto[each.key].id
+  network_interface_id = aws_network_interface.paloalto_interfaces_data[each.key].id
+  device_index         = 1
 }
