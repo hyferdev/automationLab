@@ -77,12 +77,22 @@ resource "aws_eip" "paloalto_mgmt_eip" {
   })
 }
 
+# --- Elastic IPs for Data Interfaces ---
+resource "aws_eip" "paloalto_data_eip" {
+  for_each = toset(var.availability_zones)
+  domain   = "vpc"
+
+  tags = merge(var.standard_tags, var.project_tags, {
+    Name = "${var.project_name}-${var.environment}-pa-data-eip-${each.key}"
+  })
+}
+
 # --- Network Interfaces for the Firewalls ---
-resource "aws_network_interface" "paloalto_interfaces" {
+
+# Interface 0: Management
+resource "aws_network_interface" "paloalto_mgmt" {
   for_each = toset(var.availability_zones)
 
-  # Interface 0: Management
-  # Attached to the management subnet.
   subnet_id       = module.vpc["security"].management_subnet_ids_by_az[each.key]
   security_groups = [aws_security_group.paloalto_mgmt_sg.id]
   tags            = { Name = "${var.project_name}-${var.environment}-pa-mgmt-${each.key}" }
@@ -90,30 +100,25 @@ resource "aws_network_interface" "paloalto_interfaces" {
 
 resource "aws_eip_association" "paloalto_mgmt_eip_assoc" {
   for_each             = toset(var.availability_zones)
-  network_interface_id = aws_network_interface.paloalto_interfaces[each.key].id
+  network_interface_id = aws_network_interface.paloalto_mgmt[each.key].id
   allocation_id        = aws_eip.paloalto_mgmt_eip[each.key].id
-  depends_on = [aws_instance.paloalto]
+  depends_on           = [aws_instance.paloalto]
 }
 
-resource "aws_network_interface" "paloalto_interfaces_data" {
+# Interface 1: Data (Public Egress) - Maps to ethernet1/1
+resource "aws_network_interface" "paloalto_data" {
   for_each = toset(var.availability_zones)
 
-  # Interface 1: Egress (to Internet)
-  # Attached to the public egress subnet. Source/Dest check MUST be disabled.
   subnet_id         = module.vpc["security"].egress_subnet_ids_by_az[each.key]
   source_dest_check = false
   tags              = { Name = "${var.project_name}-${var.environment}-pa-data-${each.key}" }
 }
 
-resource "aws_network_interface" "paloalto_interfaces_tgw" {
-  for_each = toset(var.availability_zones)
-
-  # Interface 2: TGW/GENEVE (to GWLB and TGW)
-  # Attached to the private TGW subnet. Source/Dest check MUST be disabled.
-  subnet_id         = module.vpc["security"].private_subnet_ids_by_az[each.key]
-  source_dest_check = false
-  tags              = { Name = "${var.project_name}-${var.environment}-pa-tgw-${each.key}" }
-
+resource "aws_eip_association" "paloalto_data_eip_assoc" {
+  for_each             = toset(var.availability_zones)
+  network_interface_id = aws_network_interface.paloalto_data[each.key].id
+  allocation_id        = aws_eip.paloalto_data_eip[each.key].id
+  depends_on           = [aws_instance.paloalto]
 }
 
 # --- Palo Alto VM-Series Instances ---
@@ -128,7 +133,7 @@ resource "aws_instance" "paloalto" {
 
   # Attach the interfaces in the correct order.
   primary_network_interface {
-    network_interface_id = aws_network_interface.paloalto_interfaces[each.key].id
+    network_interface_id = aws_network_interface.paloalto_mgmt[each.key].id
   }
 
   # Use user_data to set the initial admin password
@@ -140,9 +145,10 @@ resource "aws_instance" "paloalto" {
   })
 }
 
+# Attach Data Interface (eth1/1)
 resource "aws_network_interface_attachment" "paloalto_attach_data" {
   for_each             = toset(var.availability_zones)
   instance_id          = aws_instance.paloalto[each.key].id
-  network_interface_id = aws_network_interface.paloalto_interfaces_data[each.key].id
+  network_interface_id = aws_network_interface.paloalto_data[each.key].id
   device_index         = 1
 }
