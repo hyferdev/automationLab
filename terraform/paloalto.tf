@@ -131,7 +131,7 @@ resource "aws_instance" "paloalto" {
   iam_instance_profile = aws_iam_instance_profile.paloalto_bootstrap_profile.name
   key_name             = var.ssh_key_name
 
-  # Attach the interfaces in the correct order.
+  # Attach the primary (management) interface
   primary_network_interface {
     network_interface_id = aws_network_interface.paloalto_mgmt[each.key].id
   }
@@ -140,12 +140,21 @@ resource "aws_instance" "paloalto" {
   user_data = "vmseries-bootstrap-aws-s3-bucket=${aws_s3_bucket.bootstrap_bucket.id}"
   user_data_replace_on_change = true
 
+  # Ensure the firewall is recreated if the Data interface is replaced.
+  # This prevents "orphaned" interfaces or state mismatches.
+  lifecycle {
+    replace_triggered_by = [
+      aws_network_interface.paloalto_data[each.key]
+    ]
+  }
+
   tags = merge(var.standard_tags, var.project_tags, {
     Name = "${var.project_name}-${var.environment}-paloalto-${each.key}"
   })
 }
 
 # Attach Data Interface (eth1/1)
+
 resource "aws_network_interface_attachment" "paloalto_attach_data" {
   for_each             = toset(var.availability_zones)
   instance_id          = aws_instance.paloalto[each.key].id
