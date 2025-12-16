@@ -1,7 +1,7 @@
-# ansible/playbooks/InitialConfig.yml
+# ansible/playbooks/ConfigureGeneveLogic.yml
 
 ---
-- name: Initial Config for GWLB + TGW (GENEVE)
+- name: Configure Routing, Management, and Policies for GWLB
   hosts: firewalls
   connection: local
   gather_facts: false
@@ -9,90 +9,57 @@
   vars:
     data_interface: "ethernet1/2"
     tunnel_interface: "tunnel.1"
-
-    # Zones
-    data_transport_zone: "zone-gwlb-transport" # For physical GENEVE packets
-    overlay_zone: "zone-overlay"               # For the inner customer traffic
-
-    # Health Checks
-    health_check_profile: "allow-gwlb-probes"
-    health_check_source: "any" # Lock this down to VPC CIDR in prod
+    data_transport_zone: "zone-gwlb-transport"
+    overlay_zone: "zone-overlay" # Simplified: Traffic enters and leaves this zone
+    data_vr: "vr-data-plane"
+    # AWS GWLB Health Checks usually come from the VPC CIDR or specific subnets.
+    # Allowing "any" for the health check rule is common for setup, but lock down in prod.
+    health_check_source: "any" 
 
   tasks:
     # -----------------------------------------------------------------------
-    # NETWORK PROFILES (Health Checks)
+    # 1. MANAGEMENT PROFILE (For GWLB Health Checks)
     # -----------------------------------------------------------------------
     - name: Create Management Profile for Health Checks
       paloaltonetworks.panos.panos_management_profile:
         provider:
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
-        name: "{{ health_check_profile }}"
+        name: "allow-gwlb-probes"
         ping: true
-        http: true
-        https: true
+        http: true   # Enable if your Target Group uses HTTP
+        https: true  # Enable if your Target Group uses HTTPS
 
-    # -----------------------------------------------------------------------
-    # INTERFACES
-    # -----------------------------------------------------------------------
-    - name: Configure Data Interface (ethernet1/2) as L3/DHCP
+    - name: Attach Management Profile to Data Interface
       paloaltonetworks.panos.panos_interface:
         provider:
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
-        if_name: "{{ data_interface }}"
+        name: "{{ data_interface }}"
+        management_profile: "allow-gwlb-probes"
+        # We must repeat these to avoid overwriting existing config
         mode: "layer3"
-        enable_dhcp: true
-        create_default_route: true # Essential for the underlay return path
-        management_profile: "{{ health_check_profile }}" # Attach the profile here
-
-    - name: Create Logical Tunnel Interface (tunnel.1)
-      paloaltonetworks.panos.panos_tunnel:
-        provider:
-          ip_address: "{{ ansible_host }}"
-          api_key: "{{ panos_api_key }}"
-        if_name: "{{ tunnel_interface }}"
-        vr_name: "default"
+        enable_dhcp: true 
 
     # -----------------------------------------------------------------------
-    # ZONES & ROUTING
+    # 2. ROUTING (Send traffic back out the tunnel)
     # -----------------------------------------------------------------------
-    - name: Create Zones
-      paloaltonetworks.panos.panos_zone:
-        provider:
-          ip_address: "{{ ansible_host }}"
-          api_key: "{{ panos_api_key }}"
-        zone: "{{ item }}"
-        mode: "layer3"
-      loop:
-        - "{{ data_transport_zone }}"
-        - "{{ overlay_zone }}"
-
-    - name: Assign Interfaces to Zones
-      paloaltonetworks.panos.panos_zone:
-        provider:
-          ip_address: "{{ ansible_host }}"
-          api_key: "{{ panos_api_key }}"
-        zone: "{{ item.zone }}"
-        interface: "{{ item.iface }}"
-      loop:
-        - { zone: "{{ data_transport_zone }}", iface: "{{ data_interface }}" }
-        - { zone: "{{ overlay_zone }}", iface: "{{ tunnel_interface }}" }
-
-    - name: Create Default Route for Overlay Traffic (Return to Tunnel)
+    - name: Create Default Route for Overlay Traffic
       paloaltonetworks.panos.panos_static_route:
         provider:
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
         name: "default-overlay-route"
+        vr_name: "{{ data_vr }}"
         destination: "0.0.0.0/0"
         interface: "{{ tunnel_interface }}"
-        nexthop_type: "none" # Simply egress out the tunnel
+        # In a GWLB setup, we just shove traffic back into the tunnel.
+        # AWS handles the actual next-hop routing.
+        next_hop_type: "none"
 
     # -----------------------------------------------------------------------
-    # SECURITY
+    # 3. SECURITY POLICIES
     # -----------------------------------------------------------------------
-
     - name: Create Security Rule - Allow Health Checks
       paloaltonetworks.panos.panos_security_rule:
         provider:
@@ -100,7 +67,7 @@
           api_key: "{{ panos_api_key }}"
         rule_name: "Allow-GWLB-Health-Checks"
         source_zone: ["{{ data_transport_zone }}"]
-        destination_zone: ["{{ data_transport_zone }}"] # Traffic to self/interface IP
+        destination_zone: ["{{ data_transport_zone }}"] # Traffic hits the interface IP (self)
         source_ip: ["{{ health_check_source }}"]
         destination_ip: ["any"]
         application: ["ping", "web-browsing", "ssl"]
@@ -114,7 +81,7 @@
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
         rule_name: "Allow-All-VPC-Traffic"
-        source_zone: ["{{ overlay_zone }}"]
+        source_zone: ["{{ overlay_zone }}"] # Assuming you updated InitialConfig to use one zone
         destination_zone: ["{{ overlay_zone }}"]
         source_ip: ["any"]
         destination_ip: ["any"]
@@ -125,9 +92,9 @@
         existing_rule: "Allow-GWLB-Health-Checks"
 
     - name: Commit Configuration
-      paloaltonetworks.panos.panos_commit_firewall:
+      paloaltonetworks.panos.panos_commit:
         provider:
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
-        sync: true
-        description: "Ansible: Complete Initial Config for GWLB/GENEVE"
+        sync: True
+        comment: "Ansible: Configured GWLB Routing and Policies"
