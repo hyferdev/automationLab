@@ -1,24 +1,35 @@
 # ansible/playbooks/InitialConfig.yml
-
 ---
-- name: Initial Config for GWLB + TGW (GENEVE)
+- name: Initial Config for Data Interface
   hosts: firewalls
   connection: local
   gather_facts: false
 
   vars:
-    data_interface: "ethernet1/2"
-    tunnel_interface: "tunnel.1"
+    # Interfaces
+    data_interface: "ethernet1/1"
+    jumbo_mtu: 8568
 
     # Zones
-    data_transport_zone: "zone-gwlb-transport" # For physical GENEVE packets
-    overlay_zone: "zone-overlay"               # For the inner customer traffic
+    data_zone: "zone-data"
 
     # Health Checks
-    health_check_profile: "allow-gwlb-probes"
+    health_check_profile: "allow-probes"
     health_check_source: "any" # Lock this down to VPC CIDR in prod
 
   tasks:
+    # -----------------------------------------------------------------------
+    # GLOBAL SETTINGS
+    # -----------------------------------------------------------------------
+    - name: Enable Jumbo Frames Globally
+      paloaltonetworks.panos.panos_config_element:
+        provider:
+          ip_address: "{{ ansible_host }}"
+          api_key: "{{ panos_api_key }}"
+        edit: true
+        xpath: "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system"
+        element: "<jumbo-frame>yes</jumbo-frame>"
+
     # -----------------------------------------------------------------------
     # NETWORK PROFILES (Health Checks)
     # -----------------------------------------------------------------------
@@ -35,7 +46,7 @@
     # -----------------------------------------------------------------------
     # INTERFACES
     # -----------------------------------------------------------------------
-    - name: Configure Data Interface (ethernet1/2) as L3/DHCP
+    - name: Configure Data Interface (ethernet1/1) - DHCP/MTU
       paloaltonetworks.panos.panos_interface:
         provider:
           ip_address: "{{ ansible_host }}"
@@ -43,51 +54,28 @@
         if_name: "{{ data_interface }}"
         mode: "layer3"
         enable_dhcp: true
-        create_default_route: true # Essential for the underlay return path
-        management_profile: "{{ health_check_profile }}" # Attach the profile here
-
-    - name: Create Logical Tunnel Interface (tunnel.1)
-      paloaltonetworks.panos.panos_tunnel:
-        provider:
-          ip_address: "{{ ansible_host }}"
-          api_key: "{{ panos_api_key }}"
-        if_name: "{{ tunnel_interface }}"
-        vr_name: "default"
+        create_default_route: true # Essential for AWS routing
+        mtu: "{{ jumbo_mtu }}"
+        management_profile: "{{ health_check_profile }}"
 
     # -----------------------------------------------------------------------
-    # ZONES & ROUTING
+    # ZONES
     # -----------------------------------------------------------------------
-    - name: Create Zones
+    - name: Create Data Zone
       paloaltonetworks.panos.panos_zone:
         provider:
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
-        zone: "{{ item }}"
+        zone: "{{ data_zone }}"
         mode: "layer3"
-      loop:
-        - "{{ data_transport_zone }}"
-        - "{{ overlay_zone }}"
 
-    - name: Assign Interfaces to Zones
+    - name: Assign Data Interface to Zone
       paloaltonetworks.panos.panos_zone:
         provider:
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
-        zone: "{{ item.zone }}"
-        interface: "{{ item.iface }}"
-      loop:
-        - { zone: "{{ data_transport_zone }}", iface: "{{ data_interface }}" }
-        - { zone: "{{ overlay_zone }}", iface: "{{ tunnel_interface }}" }
-
-    - name: Create Default Route for Overlay Traffic (Return to Tunnel)
-      paloaltonetworks.panos.panos_static_route:
-        provider:
-          ip_address: "{{ ansible_host }}"
-          api_key: "{{ panos_api_key }}"
-        name: "default-overlay-route"
-        destination: "0.0.0.0/0"
-        interface: "{{ tunnel_interface }}"
-        nexthop_type: "none" # Simply egress out the tunnel
+        zone: "{{ data_zone }}"
+        interface: "{{ data_interface }}"
 
     # -----------------------------------------------------------------------
     # SECURITY
@@ -98,9 +86,9 @@
         provider:
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
-        rule_name: "Allow-GWLB-Health-Checks"
-        source_zone: ["{{ data_transport_zone }}"]
-        destination_zone: ["{{ data_transport_zone }}"] # Traffic to self/interface IP
+        rule_name: "Allow-Health-Checks"
+        source_zone: ["{{ data_zone }}"]
+        destination_zone: ["{{ data_zone }}"] # Intrazone for interface ping
         source_ip: ["{{ health_check_source }}"]
         destination_ip: ["any"]
         application: ["ping", "web-browsing", "ssl"]
@@ -108,21 +96,21 @@
         action: "allow"
         location: "top"
 
-    - name: Create Security Rule - Allow Overlay Traffic
+    - name: Create Security Rule - Allow All Traffic
       paloaltonetworks.panos.panos_security_rule:
         provider:
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
-        rule_name: "Allow-All-VPC-Traffic"
-        source_zone: ["{{ overlay_zone }}"]
-        destination_zone: ["{{ overlay_zone }}"]
+        rule_name: "Allow-All-Traffic"
+        source_zone: ["any"]
+        destination_zone: ["any"]
         source_ip: ["any"]
         destination_ip: ["any"]
         application: ["any"]
         service: ["application-default"]
         action: "allow"
         location: "after"
-        existing_rule: "Allow-GWLB-Health-Checks"
+        existing_rule: "Allow-Health-Checks"
 
     - name: Commit Configuration
       paloaltonetworks.panos.panos_commit_firewall:
@@ -130,4 +118,4 @@
           ip_address: "{{ ansible_host }}"
           api_key: "{{ panos_api_key }}"
         sync: true
-        description: "Ansible: Complete Initial Config for GWLB/GENEVE"
+        description: "Ansible: Initial Config - Data Interface (eth1/1) & Jumbo MTU"
