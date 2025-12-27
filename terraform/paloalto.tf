@@ -2,7 +2,6 @@
 # Deploys the Palo Alto Networks VM-Series firewalls and their resources.
 
 # --- IAM Role for Bootstrapping ---
-# This role allows the firewall instance to read its configuration from an S3 bucket.
 resource "aws_iam_role" "paloalto_bootstrap_role" {
   name = "${var.project_name}-${var.environment}-paloalto-bootstrap-role"
   assume_role_policy = jsonencode({
@@ -67,6 +66,42 @@ resource "aws_security_group" "paloalto_mgmt_sg" {
   })
 }
 
+# --- Security Group for Data Interface (GWLB Traffic) ---
+resource "aws_security_group" "paloalto_data_sg" {
+  name        = "${var.project_name}-${var.environment}-paloalto-data-sg"
+  description = "Allow GENEVE and Health Checks from GWLB"
+  vpc_id      = module.vpc["security"].vpc_id
+
+  # Allow GENEVE Traffic (UDP 6081)
+  ingress {
+    description = "Allow GENEVE traffic from GWLB"
+    from_port   = 6081
+    to_port     = 6081
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"] # Open to internal traffic; firewall handles policy
+  }
+
+  # Allow Health Checks (TCP 443)
+  ingress {
+    description = "Allow Health Checks from GWLB"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # GWLB originates from within the VPC
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.standard_tags, var.project_tags, {
+    Name = "${var.project_name}-${var.environment}-paloalto-data-sg"
+  })
+}
+
 # --- Elastic IPs for Management Interfaces ---
 resource "aws_eip" "paloalto_mgmt_eip" {
   for_each = toset(var.availability_zones)
@@ -108,8 +143,8 @@ resource "aws_eip_association" "paloalto_mgmt_eip_assoc" {
 # Interface 1: Data (Public Egress) - Maps to ethernet1/1
 resource "aws_network_interface" "paloalto_data" {
   for_each = toset(var.availability_zones)
-
   subnet_id         = module.vpc["security"].egress_subnet_ids_by_az[each.key]
+  security_groups   = [aws_security_group.paloalto_data_sg.id]  
   source_dest_check = false
   tags              = { Name = "${var.project_name}-${var.environment}-pa-data-${each.key}" }
 }
@@ -141,7 +176,6 @@ resource "aws_instance" "paloalto" {
   user_data_replace_on_change = true
 
   # Ensure the firewall is recreated if the Data interface is replaced.
-  # This prevents "orphaned" interfaces or state mismatches.
   lifecycle {
     replace_triggered_by = [
       aws_network_interface.paloalto_data[each.key]
@@ -154,7 +188,6 @@ resource "aws_instance" "paloalto" {
 }
 
 # Attach Data Interface (eth1/1)
-
 resource "aws_network_interface_attachment" "paloalto_attach_data" {
   for_each             = toset(var.availability_zones)
   instance_id          = aws_instance.paloalto[each.key].id
