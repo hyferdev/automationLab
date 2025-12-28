@@ -21,20 +21,36 @@ resource "aws_lb_target_group" "paloalto_tg" {
   port        = 6081 # GENEVE protocol port
   protocol    = "GENEVE"
   vpc_id      = module.vpc["security"].vpc_id
-  target_type = "instance"
+  target_type = "ip"
 
   health_check {
     protocol = "TCP"
     port     = "443"
+    interval            = 30
+    timeout             = 10
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+  }
+}
+
+# --- NEW: Listener (The missing link) ---
+# This connects the GWLB to the Target Group.
+resource "aws_lb_listener" "gwlb_listener" {
+  load_balancer_arn = aws_lb.security_gwlb.arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.paloalto_tg.arn
   }
 }
 
 # --- Target Group Attachments ---
 resource "aws_lb_target_group_attachment" "paloalto_attachments" {
+  # Iterate over the instances to get the keys (AZs), but attach the INTERFACE IP.
   for_each = aws_instance.paloalto
 
   target_group_arn = aws_lb_target_group.paloalto_tg.arn
-  target_id        = each.value.id
+  target_id        = aws_network_interface.paloalto_data[each.key].private_ip
 }
 
 
